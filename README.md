@@ -1,5 +1,5 @@
-# Mini Project: Glicko Goblins
-Having recently been down the rabbit hole of rating systems, here I implement the Glicko rating system in the context of a probability based combat simulation game between goblins in a thunderdome.
+# Mini Project: Glicko Goblins :zombie:
+Having recently been down the rabbit hole of rating systems, here I implement the Glicko rating system in the context of a probability-based combat simulation game between goblins in a thunderdome.
 
 I recommend the following two papers as both sources of my implementation and very interesting reads:
 - [A Comprehensive Guide to Chess Ratings, Glickman](http://www.glicko.net/research/acjpaper.pdf)
