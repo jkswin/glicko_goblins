@@ -87,10 +87,12 @@ class Fighter:
     
     def learn_from_experience(self, opponent_rating:int, opponent_rd:int):
         """
-        Use Glicko's expected game outcome to scale 'experience' by beating opponents against the odds
+        Use Glicko's expected game outcome to scale 'experience' by beating opponents against the odds.
+        game_outcome() is closer to 1 the more the opponent is expected to win.
         """
-        disparity = (1 - game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd)) * 0.1
+        disparity = 0.1*(1 - game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd))
         self.skill += disparity
+        self.skill = np.clip(self.skill, amin=1, amax=2)
 
     
     def swing(self, target):
@@ -108,8 +110,8 @@ class Fighter:
             return
         
         # adjust strength by rust and skill
-        effective_strength = np.max((self.strength - self.time_since_last_combat, 
-                                     STAT_DISTRIBUTIONS["strength"][2])) * self.skill
+        effective_skill = np.max((self.skill - (self.time_since_last_combat * 0.1), 0.8))
+        effective_strength = self.strength  * effective_skill
         
         if self.does_crit():
             self.critical_hits += 1
@@ -138,8 +140,6 @@ class Fighter:
         if len(self.games) > 0:
             return self.wins/len(self.games)
 
-        
-        
         
 if __name__ == "__main__":
     goblin = Fighter()

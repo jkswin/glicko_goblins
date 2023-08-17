@@ -51,8 +51,16 @@ def player_update(previous_rating, rd, game_history):
 
 
 def game_outcome(pi_r, pj_r, pi_rd, pj_rd):
-    return 1 / (1 + 10**(-g_rd(np.sqrt(pi_rd**2 + pj_rd**2)*(pi_r - pj_r))/400))
+    return 1 / (1 + 10**(-g_rd(np.sqrt(pi_rd**2 + pj_rd**2))*(pi_r - pj_r)/400))
 
 
 if __name__ == "__main__":
     print(f"Q: {Q}\nC: {C}")
+
+    answer_go = 0.376
+    calc_go = np.round(game_outcome(1400, 1500, 80, 150), 3)
+    assert calc_go == answer_go
+    
+    answer_g_rd = 0.88
+    calc_g_rd = np.round(g_rd(170), 2)
+    assert calc_g_rd == answer_g_rd
