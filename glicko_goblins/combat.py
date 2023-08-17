@@ -22,12 +22,12 @@ class Tournament:
         for t in tqdm(range(self.n_days)):
             # each day represents matches occurring simultaneously
             contestants = self.hat_draw() #len(contestants) = self.simultaneous combats
-            i = 0
-            while i < len(contestants)-2:
-                combat = Combat(fighter1=self.fighters[contestants[i]],
-                                fighter2=self.fighters[contestants[i+1]])
+            
+
+            for f1, f2 in zip(contestants[::2], contestants[1::2]):
+                combat = Combat(fighter1=self.fighters[contestants[f1]],
+                                fighter2=self.fighters[contestants[f2]])
                 combat.commence()
-                i+=2
 
             # 5% die of their injuries after each day
             deaths = np.random.choice(range(self.participants-1), size=self.turnover)
@@ -68,6 +68,7 @@ class Tournament:
 
     def hat_draw(self):
 
+        # TODO: Optimise. Lots of repeated iterations
         # Create a list of indexes based on eagerness
         index_list = []
         for i, f in enumerate(self.fighters):
@@ -78,7 +79,8 @@ class Tournament:
         # Shuffle the index list to randomize selection
         shuffle(index_list)
 
-        # Select n unique indexes from the shuffled list
+        # Select indexes from the shuffled list 
+        # making sure selected_fighters[i] != selected_fighters[i+1]
         selected_fighters = []
         current = -1
         for index in index_list:
@@ -89,7 +91,7 @@ class Tournament:
                 selected_fighters.append(index)
 
         # sort by rating so that similar rated players are paired against one another.
-        # ensure that a player cannot face his/herself
+        # ensure that a player cannot face his/herself after reordering
         combined = list(zip(selected_fighters, [self.fighters[idx].rating for idx in selected_fighters]))
         sorted_indices = [combined[0][0]]
         for i in range(1, len(combined)):
@@ -180,13 +182,3 @@ class Combat:
         elif self.fighter2.current_hp <= 0:
             return 1
         return 0
-
-
-if __name__ == "__main__":
-    path = "glicko_goblins/data/tournament.pkl"
-    tourn = Tournament()
-    tourn.run()
-    tourn.save(path)
-
-    tourn_revised = Tournament.from_save(path)
-    tourn.run()
