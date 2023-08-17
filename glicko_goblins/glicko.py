@@ -50,5 +50,9 @@ def player_update(previous_rating, rd, game_history):
             rd_dash(rd, d2)
 
 
+def game_outcome(pi_r, pj_r, pi_rd, pj_rd):
+    return 1 / (1 + 10**(-g_rd(np.sqrt(pi_rd**2 + pj_rd**2)*(pi_r - pj_r))/400))
+
+
 if __name__ == "__main__":
     print(f"Q: {Q}\nC: {C}")
