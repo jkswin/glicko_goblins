@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import random
 from configs import *
-
+from glicko import game_outcome
 
 class Fighter:
 
@@ -36,9 +36,15 @@ class Fighter:
         self.total_games: int = 0
         self.entry_day: int = entry_day
         self.time_since_last_combat:int = 0 #days
+        self.swings: int = 0
         self.guards_broken: int = 0
-        self.attacks_guarded: int = 0
+        self.successful_guards: int = 0
+        self.failed_guards: int = 0
         self.attacks_parried: int = 0
+        self.times_parried_by_opponent: int = 0
+        self.critical_hits: int = 0
+        self.damage_instances: list = []
+        self.skill: int = 1
 
     def __str__(self):
         return "\n".join([f"{k.title()}: {v}" for k,v in self.__dict__.items()])
@@ -79,29 +85,54 @@ class Fighter:
     def does_crit(self) -> bool:
         return np.random.uniform(0,1) < self.crit_prob
     
+    def learn_from_experience(self, opponent_rating:int, opponent_rd:int):
+        """
+        Use Glicko's expected game outcome to scale 'experience' by beating opponents against the odds
+        """
+        disparity = (1 - game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd)) * 0.1
+        self.skill += disparity
+
+    
     def swing(self, target):
 
+        self.swings += 1
+
+        # check for self damage
+        if target.does_parry():
+            op_damage = int(1 + target.strength * COMBAT_MULTIPLIERS["parry"])
+            self.current_hp -= op_damage
+
+            target.attacks_parried += 1
+            target.damage_instances.append(op_damage)
+            self.times_parried_by_opponent += 1
+            return
+        
+        # adjust strength by rust and skill
         effective_strength = np.max((self.strength - self.time_since_last_combat, 
-                                     STAT_DISTRIBUTIONS["strength"][2]))
+                                     STAT_DISTRIBUTIONS["strength"][2])) * self.skill
         
         if self.does_crit():
-            effective_strength *= 2
+            self.critical_hits += 1
+            effective_strength *= COMBAT_MULTIPLIERS["crit"]
 
-        if target.does_parry():
-            target.attacks_parried += 1
-            self.current_hp -= (1 + target.strength//2)
-            return
-
+        # action logic
         if target.does_guard():
             if self.does_break():
                 self.guards_broken += 1
-                target.current_hp -= (1 + effective_strength//3)
+                target.failed_guards +=1 
+                damage = 1 + effective_strength * COMBAT_MULTIPLIERS["guardbreak"]
+                
             else:
-                target.attacks_guarded +=1
-                target.current_hp -= (1 + effective_strength//8)
+                target.successful_guards +=1
+                damage = 1 + effective_strength * COMBAT_MULTIPLIERS["guard"]
 
         else:
-            target.current_hp -= (effective_strength//4)
+            damage = 1 + effective_strength * COMBAT_MULTIPLIERS["vanilla"]
+
+        # multiply by random float between 0.9 and 1
+        damage = int(damage * np.random.uniform(0.9, 1, 1)[0])
+        target.current_hp -= damage
+        self.damage_instances.append(damage)
     
     def winrate(self):
         if len(self.games) > 0:
