@@ -11,6 +11,13 @@ STAT_DISTRIBUTIONS = {"hp":         (40, 12, 20, 60),
                       "guard":      (0.5, 0.25, 0, 0.9),
                       }
 
+COMBAT_MULTIPLIERS = {"vanilla": 1/4,
+                      "guard": 1/8,
+                      "guardbreak": 1/3,
+                      "parry": 1/2,
+                      "crit": 2
+                      }
+
 NUMERALS = ["", "I", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 PLACEHOLDER_NAMES = [
