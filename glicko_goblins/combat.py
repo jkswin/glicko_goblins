@@ -150,6 +150,8 @@ class Combat:
         winner = self._check_hps()
         self.fighter1.wins += int(winner==1)
         self.fighter2.wins += int(winner==2)
+        self.fighter1.learn_from_experience(opponent_rating=self.fighter2.rating, opponent_rd=self.fighter2.rating_deviation)
+        self.fighter2.learn_from_experience(opponent_rating=self.fighter1.rating, opponent_rd=self.fighter1.rating_deviation)
 
         self._record_game(winner, time)
         self.fighter1._reset()
@@ -180,6 +182,9 @@ class Combat:
         )
 
     def _check_hps(self):
+        """
+        Returns the index of the winner or zero if no winner yet.
+        """
         if self.fighter1.current_hp <= 0:
             return 2
         elif self.fighter2.current_hp <= 0:
