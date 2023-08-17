@@ -5,6 +5,7 @@ import glicko
 from tqdm import tqdm
 import json
 from name_generator import generate_names
+import pickle 
 
 class Tournament:
 
@@ -56,7 +57,15 @@ class Tournament:
                 fighter.total_games += len(fighter.games)
                 fighter.games = []
 
-            
+    @classmethod
+    def from_save(cls, path:str):
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    def save(self, path):
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
     def hat_draw(self):
 
         # Create a list of indexes based on eagerness
@@ -95,6 +104,13 @@ class Tournament:
 
         return sorted_indices
     
+    def reset_ladder(self):
+        for fighter in self.fighters:
+            fighter.rating = 1500
+            fighter.rating_deviation = 350
+
+    def rating_interval(self):
+        raise NotImplementedError("WIP: This is to be added in future.")
 
 class Combat:
     def __init__(self, fighter1: Fighter, fighter2:Fighter) -> None:
@@ -167,8 +183,10 @@ class Combat:
 
 
 if __name__ == "__main__":
+    path = "glicko_goblins/data/tournament.pkl"
     tourn = Tournament()
     tourn.run()
-    with open("glicko_goblins/data/tournament_run.json", "w") as f:
-        gobos=[f.__dict__ for f in tourn.fighters]
-        json.dump(gobos, f)
+    tourn.save(path)
+
+    tourn_revised = Tournament.from_save(path)
+    tourn.run()
