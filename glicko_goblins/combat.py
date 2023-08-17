@@ -18,6 +18,9 @@ class Tournament:
         self.turnover = daily_mortalities
         self.n_days = n_days
 
+    def fighter_info(self) -> list:
+        return [f.__dict__ for f in self.fighters]
+    
     def run(self):
         for t in tqdm(range(self.n_days)):
             # each day represents matches occurring simultaneously
