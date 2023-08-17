@@ -92,7 +92,7 @@ class Fighter:
         """
         disparity = 0.1*(1 - game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd))
         self.skill += disparity
-        self.skill = np.clip(self.skill, amin=1, amax=2)
+        self.skill = np.clip(self.skill, a_min=1, a_max=2)
 
     
     def swing(self, target):
