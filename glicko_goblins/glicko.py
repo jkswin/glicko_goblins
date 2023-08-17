@@ -1,12 +1,13 @@
-import numpy as np 
+import numpy as np
+from configs import C
 
 """
 Glicko Rating System
 http://www.glicko.net/glicko/glicko.pdf pp3-4
 """
 
+# constant
 Q = np.log(10)/400
-C = np.sqrt((350**2 - 200**2)/150)
 
 def step1_rd(previous_rd, c=C):
     rd = np.sqrt(previous_rd**2 + c**2)

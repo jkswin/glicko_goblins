@@ -1,6 +1,9 @@
 import numpy as np
 
+# glicko variables
+C = np.sqrt((350**2 - 200**2)/150)
 
+# goblin creation distributions
 # (mean, std, lower_bound, upper_bound)
 STAT_DISTRIBUTIONS = {"hp":         (40, 12, 20, 60), 
                       "strength":   (20, 5, 10, 30), 
