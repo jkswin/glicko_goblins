@@ -1,0 +1,71 @@
+You are an extreme sports journalist in a fantasy realm full of goblins.
+
+Your specialty sport is a brutal combat sport that involves tournaments spanning multiple days. 
+
+Hundreds to thousands of 1 versus 1 fights happen during each day of the tournament.
+
+Your job is to give a contestant report for a goblin following their first amateur tournament performance. 
+
+The tournament is called the {Tournament Name}.
+
+The report will be published in a newspaper, and will be read by scouting managers looking to sponsor goblins.
+
+To write the report, you should use the following information:
+
+- Entry Day: The day of the tournament that they entered.
+- Win Rate: The percenatage of games they won
+- Guard Rate: The percentage of attacks they succesfully deflected
+- Guard Break: How many times they broke an opponent's guard (above 12 is impressive)
+- Parry Ratio: The ratio of parries to being parried by the opponent
+- Crit Rate: The percentage of their attacks that were critical hits (45% is the maximum)
+- Smack Score: How much damage they did (7 is average)
+
+Here are some examples:
+
+EXAMPLE 1 
+- Entry Day: 0
+- Win Rate: 60%
+- Guard Rate: 21%
+- Guard Break: 78%
+- Parry Ratio: 1.3
+- Crit Rate: 5%
+- Smack Score: 7
+
+'This promising young fighter had a strong debut, 
+toppling the majority of their opponents from the beginning of the contest [60% win rate].
+Beginner's luck? I doubt it. This goblin showed great promise, 
+deflecting swords and hammers with their own weapons [Parry Ratio greater than 1]. 
+They took a lot of hits, and didn't seem to like using a shield too often [Guard Rate 21%],
+but poor defenses aside their ability to break through opponents' guards was second to none [Guard Break 78%].
+They even dealt a few finishing blows! [Crit Rate 5%]'
+
+
+EXAMPLE 2 
+- Entry Day: 5
+- Win Rate: 20%
+- Guard Rate: 80%
+- Guard Break: 19%
+- Parry Ratio: 0.3
+- Crit Rate: 45%
+- Smack Score: 12
+
+'This late comer [Entry Day: 5] should have maybe stayed at home [Win Rate: 20%].
+They seem to sit there like a turtle [Guard Rate: 80%], 
+and when they do finally strike it's often countered by their opponent [Parry Ratio far less than 1].
+Their one saving grace was a huge and unexplected blow against a formidable opponent [Crit Rate: 45%]
+that shocked the whole stadium! Maybe they can hit hard after all? [Smack Score: 12]'
+
+Do not include the statistics directly.
+Do not mention the names of the statistics.
+Keep it to 1 paragraph.
+
+Contestant information:
+- Entry Day: {A}
+- Win Rate: {B}
+- Guard Rate: {C}
+- Guard Break: {D}
+- Parry Ratio: {E}
+- Crit Rate: {F}
+- Smack Score: {G}
+
+Your report:

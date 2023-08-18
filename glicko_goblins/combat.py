@@ -9,10 +9,16 @@ import pickle
 
 class Tournament:
 
-    def __init__(self, participants=1000, n_days=100, daily_combats=1000, daily_mortalities=5) -> None:
+    def __init__(self, participants=1000, n_days=100, daily_combats=1000, daily_mortalities=5, fighters: list = None) -> None:
+        
         self.possible_names = generate_names()
-        self.participants = participants
-        self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0) for _ in range(participants)]
+        if fighters is None:
+            self.participants = participants
+            self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0) for _ in range(participants)]
+        else:
+            self.fighters = fighters
+            self.participants = len(fighters)
+
         self.deceased = []
         self.daily_combats = daily_combats
         self.turnover = daily_mortalities
@@ -28,8 +34,8 @@ class Tournament:
             
 
             for f1, f2 in zip(contestants[::2], contestants[1::2]):
-                combat = Combat(fighter1=self.fighters[contestants[f1]],
-                                fighter2=self.fighters[contestants[f2]])
+                combat = Combat(fighter1=self.fighters[f1],
+                                fighter2=self.fighters[f2])
                 combat.commence()
 
             # 5% die of their injuries after each day
@@ -56,9 +62,9 @@ class Tournament:
                                                             fighter.rating_deviation, 
                                                             fighter.games)
 
-                # clear match history
-                fighter.total_games += len(fighter.games)
-                fighter.games = []
+            
+            # update their expectation
+            self.get_expectations()
 
     @classmethod
     def from_save(cls, path:str):
@@ -69,7 +75,11 @@ class Tournament:
         with open(path, "wb") as f:
             pickle.dump(self, f)
 
-    def hat_draw(self):
+    def hat_draw(self) -> list[int]:
+        """
+        Create a list of fighter indexes where idx, idx+1 is a pair of fighters who are going to fight.
+        Fighters are sampled based on eagerness and are then paired up by rank.
+        """
 
         # TODO: Optimise. Lots of repeated iterations
         # Create a list of indexes based on eagerness
@@ -114,6 +124,20 @@ class Tournament:
             fighter.rating = 1500
             fighter.rating_deviation = 350
 
+    def get_expectations(self):
+        opponents = self.participants - 1
+        for i, fighter in enumerate(self.fighters):
+            outcome = 0
+            for j, opponent in enumerate(self.fighters):
+                if i != j:
+                    outcome += glicko.game_outcome(pi_r=fighter.rating, 
+                                            pj_r=opponent.rating, 
+                                            pi_rd= fighter.rating_deviation,
+                                            pj_rd= opponent.rating_deviation,)
+            fighter.mean_outcome = outcome/opponents
+
+
+
     def rating_interval(self):
         raise NotImplementedError("WIP: This is to be added in future.")
 
@@ -152,7 +176,8 @@ class Combat:
         self.fighter2.wins += int(winner==2)
         self.fighter1.learn_from_experience(opponent_rating=self.fighter2.rating, opponent_rd=self.fighter2.rating_deviation)
         self.fighter2.learn_from_experience(opponent_rating=self.fighter1.rating, opponent_rd=self.fighter1.rating_deviation)
-
+        self.fighter1.total_games += 1
+        self.fighter2.total_games+=1
         self._record_game(winner, time)
         self.fighter1._reset()
         self.fighter2._reset()

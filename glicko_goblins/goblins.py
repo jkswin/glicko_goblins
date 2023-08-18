@@ -15,6 +15,7 @@ class Fighter:
         self.current_hp = self.max_hp
         self.strength: int = self._truncnorm(*STAT_DISTRIBUTIONS["strength"])
         self.cooldown: int = self._truncnorm(*STAT_DISTRIBUTIONS["cooldown"])
+        self.lr: float = self._truncnorm(*STAT_DISTRIBUTIONS["lr"])
         self.eagerness: int = random.choice([1,2,3])
         self.alive: bool = True
 
@@ -28,6 +29,7 @@ class Fighter:
         # rating metrics
         self.rating: int = 1500
         self.rating_deviation: int = 350
+        self.mean_outcome: float = 0.5
         self.rating_interval: int = None
 
         # history 
@@ -46,6 +48,10 @@ class Fighter:
         self.damage_instances: list = []
         self.skill: int = 1
 
+        # __future__
+        self.team: str = None
+        self.manager: str = None
+        
     def __str__(self):
         return "\n".join([f"{k.title()}: {v}" for k,v in self.__dict__.items()])
 
@@ -55,20 +61,29 @@ class Fighter:
         b = (ub-mu)/std
         val = stats.truncnorm.rvs(a,b,loc=mu,scale=std, size=1)[0]
         if ub <= 1:
-            return np.round(val, 2)
+            return np.round(val, 5)
         return int(val)
 
     def _generate_guardbreak(self):
-        """Intuitively thought of as recklessness. Less bothered about guarding = attacking more recklessly"""
-        return np.round(0.9 - self.guard_prob, 2)
+        """
+        Intuitively thought of as recklessness. 
+        Less bothered about guarding = attacking more recklessly.
+        """
+        return np.round(STAT_DISTRIBUTIONS["guard"][3] - self.guard_prob, 2)
     
     def _generate_parry(self):
-        """Opting for no defense maximises your ability to parry and break guards"""
+        """
+        Opting for no defense maximises your ability to parry and break guards.
+        Scaled and normalised by self.cooldown.
+        """
         min_cd, max_cd = STAT_DISTRIBUTIONS["cooldown"][2], STAT_DISTRIBUTIONS["cooldown"][3]
         return (max_cd - self.cooldown) * self.guardbreak_prob/(3*(max_cd-min_cd))
     
     def _generate_crit(self):
         return np.clip(0.45 - 2*self.parry_prob, a_min=0.0001, a_max=0.45)
+    
+    def _generate_lr(self):
+        return 
     
     def _reset(self):
         self.current_hp = self.max_hp
@@ -87,16 +102,20 @@ class Fighter:
     
     def learn_from_experience(self, opponent_rating:int, opponent_rd:int):
         """
-        Use Glicko's expected game outcome to scale 'experience' by beating opponents against the odds.
-        game_outcome() is closer to 1 the more the opponent is expected to win.
+        Use Glicko's expected game outcome to scale self.skill by beating opponents against the odds.
+        Approximates "learning" from harder games.
+        game_outcome() is closer to 1 the more the opponent is expected to win based on rating and rating deviation.
+
         """
-        disparity = 0.1*(1 - game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd))
+        disparity = self.lr * (game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd) - 0.5) 
         self.skill += disparity
-        self.skill = np.clip(self.skill, a_min=1, a_max=2)
+        self.skill = np.clip(self.skill, a_min=1, a_max=10)
 
     
     def swing(self, target):
-
+        """
+        Action logic for a Goblin. A goblin swings every self.cooldown iterations of combat.
+        """
         self.swings += 1
 
         # check for self damage
@@ -137,10 +156,26 @@ class Fighter:
         self.damage_instances.append(damage)
     
     def winrate(self):
+        """
+        Calculate winrate.
+        """
         if len(self.games) > 0:
             return self.wins/len(self.games)
 
+    def describe(self) -> str:
+        """Return a natural language description of the goblin."""
+    
+        return f"Name: {self.name}\nAge: {80-self.max_hp} years\nWeight: {self.cooldown + 10}kg\nMotivation: {self.eagerness} stars\nBench Press: {self.strength}kg\nBrain Cells: {int(self.lr*10e6)}\nWins: {self.wins}\nLosses:{self.total_games - self.wins}\n\n" + self.__scout_report()
+
+    def __scout_report(self):
+        """
+        Get a language model to describe the Goblin's performance in an opaque manner.
+        """
+        return ""
+    
+    def polygon(self):
+        raise NotImplementedError("WIP")
         
 if __name__ == "__main__":
-    goblin = Fighter()
-    print(goblin)
+    goblin = Fighter(name="TestGoblin56")
+    print(goblin.describe())
