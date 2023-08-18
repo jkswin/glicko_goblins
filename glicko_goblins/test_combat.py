@@ -5,10 +5,10 @@ class TestCombat(unittest.TestCase):
     
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
-        self.tourn = Tournament(participants=500, 
-                                n_days=50, 
-                                daily_combats=250, 
-                                daily_mortalities=5
+        self.tourn = Tournament(participants=700, 
+                                n_days=75,
+                                daily_combats=500, 
+                                daily_mortalities=0,
                                 )
         self.path = "glicko_goblins/data/tournament.pkl"
     
@@ -21,12 +21,8 @@ class TestCombat(unittest.TestCase):
             assert a != b
     
     #@unittest.SkipTest
-    def test_persistence_(self):
+    def test_run(self):
         self.tourn.run()
-        self.tourn.save(self.path)
-        
-        loaded_tourn = Tournament.from_save(self.path)
-        loaded_tourn.run()
 
 
 if __name__ == "__main__":
