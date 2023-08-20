@@ -9,10 +9,12 @@ using numPy
 
 # constant
 Q = np.log(10)/400
+MAX_RD = 350
+MIN_RD = 30
 
 def step1_rd(previous_rd, c=C):
     rd = np.sqrt(previous_rd**2 + c**2)
-    return np.clip(rd, a_min=30, a_max=350)
+    return np.clip(rd, a_min=MIN_RD, a_max=MAX_RD)
 
 def r_dash(previous_rating, rd, opponent_ratings, opponent_rds, outcomes, d2):
     return previous_rating + (Q/((1/rd**2) + 1/d2)) * \

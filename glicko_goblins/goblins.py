@@ -2,13 +2,27 @@ import numpy as np
 import scipy.stats as stats
 import random
 from configs import *
-from glicko import game_outcome
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+
+from glicko import game_outcome, MAX_RD, MIN_RD
 
 class Fighter:
 
     def __init__(self, name=None, entry_day=None) -> None:
         
         self.name = name 
+
+        # rating metrics
+        self.rating: float = 1500.0
+        self.rating_deviation: float = 350.0
+        self.mean_outcome: float = 0.5
+        self.rating_interval: int = None
+        self.alive: bool = True
+
+        # __future__
+        self.team: str = None
+        self.manager: str = None
         
         # static stats
         self.max_hp: int = self._truncnorm(*STAT_DISTRIBUTIONS["hp"])
@@ -16,28 +30,29 @@ class Fighter:
         self.strength: int = self._truncnorm(*STAT_DISTRIBUTIONS["strength"])
         self.cooldown: int = self._truncnorm(*STAT_DISTRIBUTIONS["cooldown"])
         self.lr: float = self._truncnorm(*STAT_DISTRIBUTIONS["lr"])
-        self.eagerness: int = random.choice([1,2,3])
-        self.alive: bool = True
+        self.eagerness: int = np.random.randint(1, MAX_EAGERNESS+1)
+        self.funding: int = self._truncnorm(*STAT_DISTRIBUTIONS["funding"])
+        
 
         # action probabilities
         self.guard_prob: float = self._truncnorm(*STAT_DISTRIBUTIONS["guard"])
-        self.guardbreak_prob: float = self._generate_guardbreak()
-        self.parry_prob: float = self._generate_parry()
-        self.crit_prob: float = self._generate_crit()
-        
+        self.guardbreak_prob: float = self._generate_guardbreak(self.guard_prob)
+        self.parry_prob: float = self._generate_parry(self.cooldown, self.guardbreak_prob)
+        self.crit_prob: float = self._generate_crit(self.parry_prob)
+        self.dodge_prob: float = self._generate_dodge(self.strength, self.max_hp)
 
-        # rating metrics
-        self.rating: int = 1500
-        self.rating_deviation: int = 350
-        self.mean_outcome: float = 0.5
-        self.rating_interval: int = None
+        # multipliers
+        self.guts: float = self._generate_guts(self.rating_deviation, self.eagerness)
+        self.avarice: float = self._generate_avarice(self.funding, STAT_DISTRIBUTIONS["funding"][3], self.eagerness)
+        self.skill: float = 1.0
 
         # history 
+        self.archived_games: list = []
         self.games: list = []
         self.wins: int = 0
         self.total_games: int = 0
         self.entry_day: int = entry_day
-        self.time_since_last_combat:int = 0 #days
+        self.time_since_last_combat: int = 0 #days
         self.swings: int = 0
         self.guards_broken: int = 0
         self.successful_guards: int = 0
@@ -45,13 +60,9 @@ class Fighter:
         self.attacks_parried: int = 0
         self.times_parried_by_opponent: int = 0
         self.critical_hits: int = 0
+        self.attacks_dodged: int = 0
         self.damage_instances: list = []
-        self.skill: int = 1
 
-        # __future__
-        self.team: str = None
-        self.manager: str = None
-        
     def __str__(self):
         return "\n".join([f"{k.title()}: {v}" for k,v in self.__dict__.items()])
 
@@ -60,30 +71,71 @@ class Fighter:
         a = (lb-mu)/std
         b = (ub-mu)/std
         val = stats.truncnorm.rvs(a,b,loc=mu,scale=std, size=1)[0]
-        if ub <= 1:
-            return np.round(val, 5)
-        return int(val)
+        if ub >= 1:
+            val = int(val)
+        return val
 
-    def _generate_guardbreak(self):
+    @staticmethod
+    def _generate_guardbreak(guard_prob):
         """
         Intuitively thought of as recklessness. 
         Less bothered about guarding = attacking more recklessly.
         """
-        return np.round(STAT_DISTRIBUTIONS["guard"][3] - self.guard_prob, 2)
+        return STAT_DISTRIBUTIONS["guard"][3] - guard_prob
     
-    def _generate_parry(self):
+    @staticmethod
+    def _generate_parry(cooldown, guardbreak_prob):
         """
         Opting for no defense maximises your ability to parry and break guards.
         Scaled and normalised by self.cooldown.
         """
         min_cd, max_cd = STAT_DISTRIBUTIONS["cooldown"][2], STAT_DISTRIBUTIONS["cooldown"][3]
-        return (max_cd - self.cooldown) * self.guardbreak_prob/(3*(max_cd-min_cd))
+        return (max_cd - cooldown) * guardbreak_prob/(max_cd-min_cd)
     
-    def _generate_crit(self):
-        return np.clip(0.45 - 2*self.parry_prob, a_min=0.0001, a_max=0.45)
+    @staticmethod
+    def _generate_crit(parry_prob):
+        """
+        High parry -> low crit
+        """
+        return np.clip(0.45 - 2*parry_prob, a_min=0.0001, a_max=0.45)
     
-    def _generate_lr(self):
-        return 
+    @staticmethod
+    def _generate_dodge(strength, max_hp):
+        """
+        Depends on HP and Strength. Range between 0 and MAX_DODGE.
+        0.5 * (Cos(root_square_sum(HP, Strength)) + 1)
+        """
+        hp_ceiling, hp_floor = STAT_DISTRIBUTIONS["hp"][3], STAT_DISTRIBUTIONS["hp"][2] 
+        strength_ceiling, strength_floor = STAT_DISTRIBUTIONS["strength"][3], STAT_DISTRIBUTIONS["strength"][2] 
+        hp_scaler = (2*np.pi)/(hp_ceiling - hp_floor)
+        strength_scaler = (2*np.pi)/(strength_ceiling-strength_floor)
+        z_hp = max_hp * hp_scaler
+        z_strength = strength * strength_scaler
+        z = np.sqrt(z_hp**2 + z_strength**2)
+        return MAX_DODGE * (0.5 * (np.cos (z+np.pi) + 1))
+    
+    @staticmethod
+    def _generate_guts(rating_deviation, eagerness):
+        """
+        Adding in some metaawareness. Showing a contestant their rating deviation affects their determination.
+        It is also a function of their base eagerness to fight.
+        And is realised down the line as a crit chance multiplier based on missing hp.
+        """
+        return np.mean(
+                        (rating_deviation/MAX_RD,
+                        eagerness/MAX_EAGERNESS)
+                        )
+    
+    @staticmethod
+    def _generate_avarice(funding, max_funding, eagerness):
+        """
+        Add a sinusoidal damage multiplier based on how much money the goblin is earning.
+        Interplays with eagerness to give the idea of "money motivation". 
+        I imagine it as some highly paid goblins get cocky, some underpaid underperform and satisfaction fluctuates between the two.
+        That also interacts with how generally eager they are.
+        """
+        av = (MAX_EAGERNESS/eagerness) * (2 * np.pi) * (funding/max_funding)
+        return 0.5 * (np.sin(av) + 1)
     
     def _reset(self):
         self.current_hp = self.max_hp
@@ -98,7 +150,14 @@ class Fighter:
         return np.random.uniform(0,1) < self.parry_prob
     
     def does_crit(self) -> bool:
-        return np.random.uniform(0,1) < self.crit_prob
+        """
+        As HP decreases, crit chance increases by a factor of the goblin's guts/determinations.
+        """
+        effective_crit = self.crit_prob + ((1 - self.current_hp/self.max_hp) * self.guts)
+        return np.random.uniform(0,1) < effective_crit
+    
+    def does_dodge(self) -> bool:
+        return np.random.uniform(0,1) < self.dodge_prob
     
     def learn_from_experience(self, opponent_rating:int, opponent_rd:int):
         """
@@ -107,8 +166,8 @@ class Fighter:
         game_outcome() is closer to 1 the more the opponent is expected to win based on rating and rating deviation.
 
         """
-        disparity = self.lr * (game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd) - 0.5) 
-        self.skill += disparity
+        disparity = game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd) - 0.5
+        self.skill += disparity * self.lr
         self.skill = np.clip(self.skill, a_min=1, a_max=10)
 
     
@@ -128,9 +187,15 @@ class Fighter:
             self.times_parried_by_opponent += 1
             return
         
-        # adjust strength by rust and skill
+        if target.does_dodge():
+            target.attacks_dodged +=1 
+            self.damage_instances.append(0)
+            return 
+        
+        # adjust strength by rust, skill and cooldown. High cooldown implies more body mass to me
         effective_skill = np.max((self.skill - (self.time_since_last_combat * 0.1), 0.8))
-        effective_strength = self.strength  * effective_skill
+        effective_strength = (self.strength + self.cooldown)  * effective_skill
+        effective_strength += (effective_strength*self.avarice)
         
         if self.does_crit():
             self.critical_hits += 1
@@ -162,6 +227,8 @@ class Fighter:
         if len(self.games) > 0:
             return self.wins/len(self.games)
 
+
+    ## STR METHODS FOR VIEWING GOBLIN INFO ##
     def describe(self) -> str:
         """Return a natural language description of the goblin."""
     
@@ -173,9 +240,108 @@ class Fighter:
         """
         return ""
     
-    def polygon(self):
-        raise NotImplementedError("WIP")
-        
+    def base_stats(self, subset:str="bs") -> dict:
+        stats= {"bs":["max_hp", "strength", "cooldown", "eagerness", "lr"],
+                "bp": ["guard_prob", "guardbreak_prob", "parry_prob", "crit_prob", "dodge_prob", "guts", "avarice"],
+                }
+        return {k:v for k,v in self.__dict__.items() if k in stats.get(subset, stats["bs"])}
+    
+    ## PLOT METHODS FOR VISUALISING GOBLIN INFO ##
+    def plot_base_stats(self) -> Figure:
+        """
+        Plot the Base Stats as a horizontal bar.
+        Plot the Base Probabilities as a polygon plot.
+
+        Disclaimer: Quick and dirty.
+        """
+        bs = self.base_stats(subset="bs")
+        bs["hp"] = bs["max_hp"]
+        del bs["max_hp"]
+        max_vals = {k:STAT_DISTRIBUTIONS.get(k, [None,None,None,None])[3] for k in bs.keys()}
+        max_vals.update({"eagerness":MAX_EAGERNESS})
+        proportions = {k:v / max_vals[k] for k, v in bs.items()}
+        proportions.update({"cooldown": 1 - proportions["cooldown"]}) # greater cooldown is a bad thing so invert
+        colours = [plt.cm.RdYlGn(proportions[key]) for key in bs]
+
+        # make fig
+        fig, ax = plt.subplots(ncols=2, figsize=(12, 5))
+        ax[0].barh(list(proportions.keys()), list(proportions.values()), color=colours)
+
+        #stylise
+        ax[0].set_title("Base Stats", size=14)
+        ax[0].set_xticks([])
+        ytick_labels = [key.title() for key in proportions.keys()]
+        ax[0].set_yticks(list(proportions.keys()), ytick_labels)
+
+        # now for the polygon
+        ax[1].remove()
+        ax_polar = fig.add_subplot(1, 2, 2, projection='polar')
+        ax_polar.set_title("Specialisms", size=14)
+        bp = self.base_stats("bp")
+
+        # to normalise the polygon, divide by the maximum possible value for each
+        fc = self._floors_and_ceilings()
+        for k in bp.keys():
+            bp[k] /= fc["ceilings"][k] - fc["floors"][k]
+
+        sts = list(bp.values())
+
+        angles = np.linspace(0, 2*np.pi, len(bp), endpoint=False)
+        ax_polar.fill(angles, sts, alpha=0.4, color="mediumspringgreen")
+
+        ax_polar.set_xticks(angles)
+        ax_polar.set_xticklabels([k.replace("_prob", "").title() for k in bp.keys()])
+        ax_polar.set_yticklabels([])
+        ax_polar.spines['polar'].set_visible(False)
+
+        return fig
+
+
+    def _floors_and_ceilings(self):
+        """Intentionally verbose to show feature interactions directly"""
+
+        return {"floors": {
+                        "guard_prob":STAT_DISTRIBUTIONS["guard"][2],
+                        "guardbreak_prob":self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][3]),
+                        "parry_prob": self._generate_parry(STAT_DISTRIBUTIONS["cooldown"][3], 
+                                                           self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][3])
+                                                           ),
+                        "crit_prob": self._generate_crit(self._generate_parry(STAT_DISTRIBUTIONS["cooldown"][2], 
+                                                           self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][2])
+                                                           )),
+                        "dodge_prob": 0,
+                        "guts":self._generate_guts(MIN_RD, 1),
+                        "avarice":0,
+                        "max_hp": STAT_DISTRIBUTIONS["hp"][2],
+                        "hp": STAT_DISTRIBUTIONS["hp"][2],
+                        "strength": STAT_DISTRIBUTIONS["strength"][2],
+                        "cooldown":STAT_DISTRIBUTIONS["cooldown"][2],
+                        "eagerness":1,
+                        "lr":STAT_DISTRIBUTIONS["lr"][2],
+                        },
+
+                "ceilings": {
+                        "guard_prob":STAT_DISTRIBUTIONS["guard"][3],
+                        "guardbreak_prob":self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][2]),
+                        "parry_prob":self._generate_parry(STAT_DISTRIBUTIONS["cooldown"][2], 
+                                                           self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][2])
+                                                           ),
+                        "crit_prob":self._generate_crit(self._generate_parry(STAT_DISTRIBUTIONS["cooldown"][3], 
+                                                           self._generate_guardbreak(STAT_DISTRIBUTIONS["guard"][3])
+                                                           )),
+                        "dodge_prob":MAX_DODGE,
+                        "guts":self._generate_guts(MAX_RD, MAX_EAGERNESS),
+                        "avarice":1,
+                        "max_hp": STAT_DISTRIBUTIONS["hp"][3],
+                        "hp": STAT_DISTRIBUTIONS["hp"][3],
+                        "strength": STAT_DISTRIBUTIONS["strength"][3],
+                        "cooldown": STAT_DISTRIBUTIONS["cooldown"][3],
+                        "eagerness":MAX_EAGERNESS,
+                        "lr":STAT_DISTRIBUTIONS["lr"][3],
+                        },
+            }
+
+
 if __name__ == "__main__":
-    goblin = Fighter(name="TestGoblin56")
-    print(goblin.describe())
+    g = Fighter()
+    print(g._floors_and_ceilings())

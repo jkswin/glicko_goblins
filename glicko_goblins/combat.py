@@ -39,7 +39,7 @@ class Tournament:
                 combat.commence()
 
             # 5% die of their injuries after each day
-            deaths = np.random.choice(range(self.participants-1), size=self.turnover)
+            deaths = np.random.choice(range(self.participants-self.turnover), size=self.turnover)
             # sort to avoid indexing issues when calling pop
             deaths = sorted(deaths, reverse=True)
             for d in deaths:
@@ -61,10 +61,14 @@ class Tournament:
                                                             fighter.rating, 
                                                             fighter.rating_deviation, 
                                                             fighter.games)
+                fighter.guts = fighter._generate_guts(fighter.rating_deviation, fighter.eagerness)
+                fighter.archived_games.extend(fighter.games)
+                fighter.games = []
 
             
             # update their expectation
             self.get_expectations()
+            
 
     @classmethod
     def from_save(cls, path:str):
@@ -123,6 +127,8 @@ class Tournament:
         for fighter in self.fighters:
             fighter.rating = 1500
             fighter.rating_deviation = 350
+            fighter.mean_outcome = 0.5
+
 
     def get_expectations(self):
         opponents = self.participants - 1
@@ -193,6 +199,7 @@ class Combat:
              "opponent_rating":self.fighter2.rating,
              "opponent_rd":self.fighter2.rating_deviation,
              "opponent_n_games": len(self.fighter2.games),
+             "opponent_name": self.fighter2.name,
              }
         )
 
@@ -203,6 +210,7 @@ class Combat:
              "opponent_rating":self.fighter1.rating,
              "opponent_rd":self.fighter1.rating_deviation,
              "opponent_n_games": len(self.fighter1.games),
+             "opponent_name": self.fighter1.name,
              }
         )
 
