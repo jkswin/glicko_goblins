@@ -200,6 +200,8 @@ class Combat:
              "opponent_rd":self.fighter2.rating_deviation,
              "opponent_n_games": len(self.fighter2.games),
              "opponent_name": self.fighter2.name,
+             "own_rating": self.fighter1.rating,
+             "own_rd": self.fighter1.rating_deviation,
              }
         )
 
@@ -211,6 +213,8 @@ class Combat:
              "opponent_rd":self.fighter1.rating_deviation,
              "opponent_n_games": len(self.fighter1.games),
              "opponent_name": self.fighter1.name,
+             "own_rating": self.fighter2.rating,
+             "own_rd": self.fighter2.rating_deviation,
              }
         )
 
