@@ -164,10 +164,9 @@ class Fighter:
         Use Glicko's expected game outcome to scale self.skill by beating opponents against the odds.
         Approximates "learning" from harder games.
         game_outcome() is closer to 1 the more the opponent is expected to win based on rating and rating deviation.
-
         """
-        disparity = game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd) - 0.5
-        self.skill += disparity * self.lr
+        disparity = game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd)
+        self.skill += self.lr * ((2*(disparity - 0.5))**2)
         self.skill = np.clip(self.skill, a_min=1, a_max=10)
 
     
