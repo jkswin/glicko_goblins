@@ -1,5 +1,5 @@
 import numpy as np
-from configs import C
+from .configs import C
 
 """
 Implementing the Glicko Rating System 

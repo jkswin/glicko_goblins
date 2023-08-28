@@ -1,17 +1,18 @@
 import numpy as np
 import scipy.stats as stats
 import random
-from configs import *
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from glicko import game_outcome, MAX_RD, MIN_RD
+from .configs import *
+from .glicko import game_outcome, MAX_RD, MIN_RD
 
 class Fighter:
 
-    def __init__(self, name=None, entry_day=None) -> None:
+    def __init__(self, name=None, entry_day=None, tourn_id=None) -> None:
         
-        self.name = name 
+        self.name = name
+        self.tourn_id = tourn_id
 
         # rating metrics
         self.rating: float = 1500.0
@@ -281,7 +282,7 @@ class Fighter:
         # to normalise the polygon, divide by the maximum possible value for each
         fc = self._floors_and_ceilings()
         for k in bp.keys():
-            bp[k] /= fc["ceilings"][k] - fc["floors"][k]
+            bp[k] /= fc["ceilings"][k]
 
         sts = list(bp.values())
 

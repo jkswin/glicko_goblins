@@ -1,5 +1,5 @@
 import unittest
-from combat import Tournament
+from .combat import Tournament
 
 class TestCombat(unittest.TestCase):
     

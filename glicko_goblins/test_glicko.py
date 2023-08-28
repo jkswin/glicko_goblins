@@ -1,6 +1,7 @@
 import unittest
-import glicko
 import numpy as np
+
+from . import glicko
 
 """
 Verifying that I have correctly implemented the formulas.

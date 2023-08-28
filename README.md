@@ -1,4 +1,13 @@
 # Mini Project: Glicko Goblins :zombie:
+
+----
+
+__UPDATE:__ This is now a slightly larger project... glicko_goblins is now part of a discord bot hosted locally on a private discord server. There is an economy in which members can trade fake currency. The value of the currency depends on real-world events such as the performance of my friends in their video game matches. Currency can be traded for a centralized currency - Gold - which can be used to sponsor goblins in the Goblin Tournaments that this repo started out as. Sponsored goblins return money to their sponsor based on success in the tournaments. 
+
+The bot is hosted on a raspberryPi :) 
+
+----
+
 Having recently been down the rabbit hole of rating systems, here I implement the Glicko rating system in the context of a probability-based combat simulation game between goblins in a thunderdome.
 
 I recommend the following two papers as both sources of my implementation and very interesting reads:
@@ -9,9 +18,7 @@ TLDR; the Glicko system aims to fix a shortcoming of the Elo system, being the r
 
 That being said, unlike Elo it cannot be used to effectively order players by skill, as it describes a range that a player's hidden "skill" parameter is likely to be in to a certain degree of confidence.
 
-- The 'Goblins' can be found [here](glicko_goblins/goblins.py)
-    - Each Goblin has HP, Strength, Cooldown, Parry Probability, Guard Probability, Guardbreak Probability and Eagerness. 
-    - Certain stats have direct relationships with others and have been v briefly shown in [this notebook](glicko_goblins/goblin_stats.ipynb) alongside rating correlation trends.
+- The 'Goblins' can be found [here](glicko_goblins/goblins.py) and are described in detail [here](glicko_goblins/goblin_stats.ipynb).
 
     
 - The Tournament logic is found in [combat.py](glicko_goblins/combat.py)
@@ -20,3 +27,11 @@ That being said, unlike Elo it cannot be used to effectively order players by sk
 
 - The Rating System itself is found in [glicko.py](glicko_goblins/glicko.py)
     - The time period after which the players' ratings are updated is 1 tournament day. 
+
+## To use the Discord Bot yourself:
+In this directory add a .env file with the following content:
+```
+DISCORD = "YOUR_API_KEY"
+RIOT = "YOUR_API_KEY"
+SUMMONERS = ["GBP", "MadeUpPersonAccountName", "tft"]
+```

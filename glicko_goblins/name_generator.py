@@ -1,7 +1,8 @@
 import numpy as np
-from configs import *
 from random import shuffle
 
+
+from .configs import *
 def generate_names():
     combinations = []
     

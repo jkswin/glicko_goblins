@@ -1,11 +1,12 @@
-from goblins import Fighter
 from random import shuffle, choice
 import numpy as np
-import glicko
 from tqdm import tqdm
 import json
-from name_generator import generate_names
 import pickle 
+
+from .goblins import Fighter
+from .name_generator import generate_names
+from . import glicko
 
 class Tournament:
 
@@ -14,7 +15,7 @@ class Tournament:
         self.possible_names = generate_names()
         if fighters is None:
             self.participants = participants
-            self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0) for _ in range(participants)]
+            self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0, tourn_id=i) for i in range(participants)]
         else:
             self.fighters = fighters
             self.participants = len(fighters)
@@ -23,53 +24,56 @@ class Tournament:
         self.daily_combats = daily_combats
         self.turnover = daily_mortalities
         self.n_days = n_days
+        self.manager_teams = {}
 
     def fighter_info(self) -> list:
         return [f.__dict__ for f in self.fighters]
     
+    def run_day(self,t=0):
+        # each day represents matches occurring simultaneously
+        contestants = self.hat_draw() #len(contestants) = self.simultaneous combats
+        
+
+        for f1, f2 in zip(contestants[::2], contestants[1::2]):
+            combat = Combat(fighter1=self.fighters[f1],
+                            fighter2=self.fighters[f2])
+            combat.commence()
+
+        # 5% die of their injuries after each day
+        deaths = np.random.choice(range(self.participants-self.turnover), size=self.turnover)
+        # sort to avoid indexing issues when calling pop
+        deaths = sorted(deaths, reverse=True)
+        for d in deaths:
+            self.fighters[d].alive = False
+            self.deceased.append(self.fighters.pop(d))
+
+        # add that many new fighters into the mix. #TODO Account for tourn_id
+        [self.fighters.append(Fighter(name=self.possible_names.pop(0),entry_day=t+1)) for _ in range(self.turnover)]
+        assert len(self.fighters) == self.participants
+
+        # update each fighter's glicko score after each day
+        for fighter_id, fighter in enumerate(self.fighters):
+            if fighter_id in contestants:
+                fighter.time_since_last_combat = 0
+            else:
+                fighter.time_since_last_combat +=1
+
+            fighter.rating, fighter.rating_deviation = glicko.player_update(
+                                                        fighter.rating, 
+                                                        fighter.rating_deviation, 
+                                                        fighter.games)
+            fighter.guts = fighter._generate_guts(fighter.rating_deviation, fighter.eagerness)
+            fighter.archived_games.extend(fighter.games)
+            fighter.games = []
+
+        # update their expectation
+        self.get_expectations()
+    
     def run(self):
         for t in tqdm(range(self.n_days)):
-            # each day represents matches occurring simultaneously
-            contestants = self.hat_draw() #len(contestants) = self.simultaneous combats
-            
-
-            for f1, f2 in zip(contestants[::2], contestants[1::2]):
-                combat = Combat(fighter1=self.fighters[f1],
-                                fighter2=self.fighters[f2])
-                combat.commence()
-
-            # 5% die of their injuries after each day
-            deaths = np.random.choice(range(self.participants-self.turnover), size=self.turnover)
-            # sort to avoid indexing issues when calling pop
-            deaths = sorted(deaths, reverse=True)
-            for d in deaths:
-                self.fighters[d].alive = False
-                self.deceased.append(self.fighters.pop(d))
-
-            # add that many new fighters into the mix
-            [self.fighters.append(Fighter(name=self.possible_names.pop(0),entry_day=t+1)) for _ in range(self.turnover)]
-            assert len(self.fighters) == self.participants
-
-            # update each fighter's glicko score after each day
-            for fighter_id, fighter in enumerate(self.fighters):
-                if fighter_id in contestants:
-                    fighter.time_since_last_combat = 0
-                else:
-                    fighter.time_since_last_combat +=1
-
-                fighter.rating, fighter.rating_deviation = glicko.player_update(
-                                                            fighter.rating, 
-                                                            fighter.rating_deviation, 
-                                                            fighter.games)
-                fighter.guts = fighter._generate_guts(fighter.rating_deviation, fighter.eagerness)
-                fighter.archived_games.extend(fighter.games)
-                fighter.games = []
+            self.run_day(t=t)
 
             
-            # update their expectation
-            self.get_expectations()
-            
-
     @classmethod
     def from_save(cls, path:str):
         with open(path, "rb") as f:
