@@ -139,7 +139,7 @@ class Background(commands.Cog):
             tax = json.load(f)["tax"]
 
         for fighter in self.tournament.fighters:
-            fighter.funding += tax//10
+            fighter.funding += int(np.log2(tax))
 
         self.tournament.run_day()
         self.tournament.save(self.tournament_path)
