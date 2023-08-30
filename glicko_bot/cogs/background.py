@@ -13,6 +13,8 @@ import numpy as np
 from ..modules.currency_dependencies import currency_query
 from dotenv import dotenv_values
 import pandas as pd
+import os
+import shutil
 
 
 cfg = dotenv_values(".env")
@@ -28,7 +30,9 @@ tourn_times = [datetime.time(hour=21, minute=30, tzinfo=utc),
                datetime.time(hour=23, tzinfo=utc),
                datetime.time(hour=23, minute=30, tzinfo=utc),
                datetime.time(hour=00, tzinfo=utc),
-               ] 
+               ]
+
+backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24)]
 
 
 
@@ -40,6 +44,7 @@ class Background(commands.Cog):
 
         self.update_exchange_rate.start()
         self.init_tournament.start()
+        self.backup_data.start()
 
         self.tournament = None
         self.accepting_sponsors = True
@@ -55,6 +60,7 @@ class Background(commands.Cog):
         self.update_exchange_rate.cancel()
         self.init_tournament.cancel()
         self.run_tournament.cancel()
+        self.backup_data.cancel()
 
 
     @tasks.loop(time=tourn_times)
@@ -86,6 +92,7 @@ class Background(commands.Cog):
                 kitty["tax"] += pre_payout - payout
                 manager_id = discord.utils.get(self.bot.users, name=goblin.manager).id
                 users[str(manager_id)]["GLD"] += payout
+                goblin.earnings += payout
 
                 output += f"{goblin.manager} earned {payout:,.2f} GLD from {goblin.name}'s performance!\n"
 
@@ -111,13 +118,19 @@ class Background(commands.Cog):
                                         daily_combats=50,
                                         daily_mortalities=0,
                                         )
+        with open(self.kitty_path, "r") as f:
+            tax = json.load(f)["tax"]
+
+        for fighter in self.tournament:
+            fighter.funding += tax//10
+
         self.tournament.run_day()
         self.tournament.save(self.tournament_path)
 
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"@everyone __It's {start_time.strftime('%H:%M')} UTC so the daily tournament has started!__\n\n \nYou have 30 minutes to choose any sponsorships!\n Call !scout to see the contestants and !fund to invest your gold!"
+                message = f"@everyone __It's {start_time.strftime('%H:%M')} UTC so the daily tournament has started!__\n\n \nYou have 30 minutes to choose any sponsorships!\n Call *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!"
                 await channel.send(message)
         
         self.bot.accepting_sponsors = True
@@ -150,7 +163,7 @@ class Background(commands.Cog):
             user_wallets = json.load(f)
         for currency_quantities in user_wallets.values():
             for currency, quantity in currency_quantities.items():
-                if currency != "GLD":
+                if currency != "GLD" and currency in new_rates.keys():
                     if currency not in totals.keys():
                         totals[currency] = quantity
                     else:
@@ -193,9 +206,36 @@ class Background(commands.Cog):
             else:
                 print(f"Channel '{self.channel_name}' not found in '{guild.name}'.")
 
+    @tasks.loop(time=backup_times)
+    async def backup_data(self):
+        source_directory = 'glicko_bot/cogs/data'
+        backup_directory = 'glicko_bot/cogs/backup'
+        
+        # Remove the existing backup directory if it exists
+        if os.path.exists(backup_directory):
+            shutil.rmtree(backup_directory)
+        
+        # Create the backup directory
+        os.makedirs(backup_directory)
+        
+        # Loop through the contents of the source directory
+        for item in os.listdir(source_directory):
+            source_item = os.path.join(source_directory, item)
+            backup_item = os.path.join(backup_directory, item)
+            
+            # If the item is a directory, use shutil.copytree to copy the entire directory
+            if os.path.isdir(source_item):
+                shutil.copytree(source_item, backup_item)
+            # If the item is a file, use shutil.copy2 to copy the file with metadata
+            elif os.path.isfile(source_item):
+                shutil.copy2(source_item, backup_item)
+        
+        print("Backup completed.")
+
     @init_tournament.before_loop
     @run_tournament.before_loop
     @update_exchange_rate.before_loop
+    @backup_data.before_loop
     async def before_background_task(self):
         await self.bot.wait_until_ready()
 

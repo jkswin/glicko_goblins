@@ -8,6 +8,7 @@ import json
 import warnings
 
 data_path = "glicko_bot/data"
+backup_path = "glicko_bot/backup"
 data_stores = {"exchange_history.json": {},
                "exchange.json": {"GLD":0, "SRC":0, "GRC":1},
                 "users.json": {},
@@ -17,27 +18,36 @@ data_stores = {"exchange_history.json": {},
 
 if __name__ == "__main__":
     
+    # try install dependencies with pip
     try:
         subprocess.run(["pip", "install", "-r", "requirements.txt"])
     except Exception as e:
         print(e)
         print("Requirements will need installing manually.")
 
-    # create .env file
+    # try create .env file
     if not os.path.exists(".env"):
         with open(".env", "w") as f:
             f.write("DISCORD=YOUR_API_KEY\nRIOT=YOUR_API_KEY\nSUMMONERS=[[`GRC`, `RandomExampleName`, `tft`], ['SRC', `OtherExample`, `lol`]]")
         warnings.warn("Add the appropriate API keys and Summoners to the newly created .env file.")
         
-
+    # try create data directory
     if not os.path.exists(data_path):
         print("Creating data directory...")
         os.mkdir(data_path)
         print("Done")
     else:
-        print("Data directory already exists.")
+        print(f"{data_path} already exists.")
 
+    # try create backup directory
+    if not os.path.exists(backup_path):
+        print("Creating backup directory...")
+        os.mkdir(backup_path)
+        print("Done")
+    else:
+        print(f"{backup_path} already exists.")
 
+    # try create artwork folder
     ap = os.path.join(data_path, "art")
     if not os.path.exists(ap):
         os.mkdir(ap)
@@ -50,6 +60,7 @@ if __name__ == "__main__":
     else:
         print(f"{ap} already exists!")
     
+    # try add fundamental data stores to data path
     for filename, content in data_stores.items():
         path = os.path.join(data_path, filename)
         if not os.path.exists(path):
