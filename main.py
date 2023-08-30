@@ -21,8 +21,11 @@ Members can trade Gold for ownership of precious artwork.\n\n\
 Sponsor commands are my favourite; invest your Gold into daily Goblin Tournaments\
 and watch as fighters earn for you.\n\nIf you're uncertain, type !help name_of_command :)"
 
+class GobboBot(commands.Bot):
+    accepting_sponsors = False
+
 # bot goooooo
-bot = commands.Bot(command_prefix="!", intents=intents, description=description)
+bot = GobboBot(command_prefix="!", intents=intents, description=description)
 
 
 @bot.event
@@ -40,5 +43,5 @@ async def on_ready():
 if __name__ == "__main__":
     bot.run(cfg["DISCORD"], 
             log_handler=handler, 
-            log_level=logging.DEBUG
+            log_level=logging.ERROR,
             )
