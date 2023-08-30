@@ -63,7 +63,11 @@ async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
     elif queue_type == "lol":
         ranked_url = f"/lol/league/v4/entries/by-summoner/{summoner_id}"
         response = await fetch_data(session, ROUTE + ranked_url)
-        ranked_info = [r for r in response if r["queueType"] == "RANKED_SOLO_5x5"][0]
+        ranked_info = False
+        for r in response:
+            if r["queueType"] == "RANKED_SOLO_5x5":
+                ranked_info = r
+                break
 
     else:
         raise ValueError("queue_type must be one of ['lol', 'tft']")
