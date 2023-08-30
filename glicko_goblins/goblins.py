@@ -13,6 +13,7 @@ class Fighter:
         
         self.name = name
         self.tourn_id = tourn_id
+        self.earnings = 0
 
         # rating metrics
         self.rating: float = 1500.0
