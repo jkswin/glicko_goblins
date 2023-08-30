@@ -2,6 +2,7 @@ app.py
 ideas.py
 ideas.txt
 glicko_bot/data
+glicko_goblins/data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

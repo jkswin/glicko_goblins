@@ -15,6 +15,7 @@ from dotenv import dotenv_values
 import json
 import numpy as np
 import random
+import os
 
 
 ROUTE = "https://euw1.api.riotgames.com"
@@ -35,16 +36,9 @@ RANK_MULTIPLIERS = {
     "EMERALD":      25,
     "DIAMOND":      29,
     "MASTER":       33,
-    "GRANDMASTER":  37,
-    "CHALLENGER":   41,
+    "GRANDMASTER":  33,
+    "CHALLENGER":   33,
 }
-
-cfg = dotenv_values(".env")
-summoners = json.loads(cfg["SUMMONERS"])
-
-def soloq_to_currency(summoner_id):
-    raise NotImplementedError()
-    
 
 cfg = dotenv_values(".env")
 summoners = json.loads(cfg["SUMMONERS"])
@@ -53,7 +47,7 @@ async def fetch_data(session, url):
     async with session.get(url, headers={"X-Riot-Token": cfg["RIOT"]}) as response:
         return await response.json()
 
-async def tft_to_currency(session, queue_type, summoner):
+async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
     summoner_url = f"/lol/summoner/v4/summoners/by-name/{summoner}"
     response = await fetch_data(session, ROUTE + summoner_url)
     
@@ -76,41 +70,29 @@ async def tft_to_currency(session, queue_type, summoner):
     wins = ranked_info["wins"]
     losses = ranked_info["losses"]
     
-    return calculate_currency(tier, rank, lp, wins, losses)
+    return await calculate_currency(tier, rank, lp, wins, losses, noise, session)
 
-def calculate_currency(tier, rank, lp, wins, losses, noise: bool = True):
+async def calculate_currency(tier, rank, lp, wins, losses, noise, session):
+
     high_elo = ["MASTER", "GRANDMASTER", "CHALLENGER"]
     base_value = 1 + RANK_MULTIPLIERS[tier] - rank
     
     if tier not in high_elo:
         value = base_value + ((4 * lp) / 100)
     else:
-        mins = []
-        maxes = []
-        for url_tier in high_elo:
-            response = requests.get(ROUTE + f"/tft/league/v1/{url_tier.lower()}",
-                                    headers={"X-Riot-Token": cfg["RIOT"]}).json()
-            lps = [val["leaguePoints"] for val in response["entries"]]
-            mins.append(np.min(lps))
-            maxes.append(np.max(lps))
+        response = await fetch_data(url=ROUTE + f"/tft/league/v1/challenger", session=session)
+        lps = [val["leaguePoints"] for val in response["entries"]]
+        average_challenger = np.mean(lps)
+        top_player_lp = np.max(lps)
+        difference = lp - average_challenger
+        value = base_value + (base_value*difference/(top_player_lp + 1))
         
-        position = high_elo.index(url_tier)
-        tier_max = maxes[position]  # maximum of current tier
-        
-        if url_tier != "CHALLENGER":
-            next_tier_min = mins[position + 1]  # minimum of next tier
-        else:
-            next_tier_min = tier_max
-        
-        lp_divisor = np.mean((tier_max, next_tier_min))
-        value = base_value + ((4*lp)/ lp_divisor)
-    
-    value *= (wins / losses)/2
+    value *= (wins/losses)**2
 
     if noise:
-        return value * random.uniform(0.98, 1.02)
+        value *= random.uniform(0.9, 1.1)
     
-    return value
+    return np.max((0.0001, value))
 
 async def currency_query(summoners, noise=True):
     async with aiohttp.ClientSession() as session:

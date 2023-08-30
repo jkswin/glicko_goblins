@@ -6,18 +6,19 @@ Visualise how currency values have changed over time.
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 import json
 import random
 import os
 import pandas as pd
-from datetime import datetime
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from PIL import Image
 import io
+from dotenv import dotenv_values
 
 sns.set_theme()
+cfg = dotenv_values(".env")
 
 
 class Economy(commands.Cog):
@@ -27,7 +28,9 @@ class Economy(commands.Cog):
         self.WALLET_PATH = "glicko_bot/data/users.json"
         self.EXCHANGE_PATH = "glicko_bot/data/exchange.json"
         self.HISTORY_PATH = "glicko_bot/data/exchange_history.json"
+        self.summoners = json.loads(cfg["SUMMONERS"]) #TODO: Make the default wallet load in all currencies from the .env
         self.tax = 0.02
+        self.channel_name = "general"
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -35,10 +38,11 @@ class Economy(commands.Cog):
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
         if user_id not in users:
-            users[user_id] = {"GLD": 100,
-                   "SRC": 0,
-                   "GRC": 0,
-                   }
+            users[user_id] = {"GLD": 100}
+            for currency in self.summoners:
+                currency_name = currency[0]
+                users[user_id].update({currency_name:0})
+
             with open(self.WALLET_PATH, "w") as f:
                 json.dump(users, f)
 
@@ -63,10 +67,12 @@ class Economy(commands.Cog):
         else:
             await ctx.send(f"You don't have a wallet yet! Try {ctx.prefix}create_wallet")
 
+    @commands.cooldown(1, 300, BucketType.user)
     @commands.command(aliases=["cw"])
     async def create_wallet(self, ctx):
         """
         If you somehow end up without a wallet, get a new one...
+        5 Minute Cooldown
 
         Example usage:
         !create_wallet
@@ -76,17 +82,23 @@ class Economy(commands.Cog):
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
         if user_id not in users:
-            users[user_id] = {"GLD": 5, "SRC": 0, "GRC": 0}
+            users[user_id] = {"GLD": 5}
+            for currency in self.summoners:
+                currency_name = currency[0]
+                users[user_id].update({currency_name:0})
+                
             with open(self.WALLET_PATH, "w") as f:
                 json.dump(users, f)
             await ctx.send("Wallet created successfully!")
         else:
             await ctx.send("You already have a wallet.")
 
+    @commands.cooldown(1,60, BucketType.user)
     @commands.command()
     async def steal(self, ctx):
         """
         Try steal gold. Don't get caught...
+        60 Second Cooldown
 
         Example usage:
         !steal 
@@ -123,7 +135,7 @@ class Economy(commands.Cog):
         Example usage:
         !give_gold 10 myfriendsusername
         """
-        if amount <= 0:
+        if amount <= 0.001:
             await ctx.send("Invalid amount.")
             return
 
@@ -145,7 +157,9 @@ class Economy(commands.Cog):
         else:
             await ctx.send("Invalid users.")
 
-        
+    def load_exchange_data(self):
+            with open(self.EXCHANGE_PATH, "r") as exchange_file:
+                return json.load(exchange_file)    
 
     @commands.command(aliases=["ex"])
     async def exchange(self, ctx, 
@@ -159,12 +173,8 @@ class Economy(commands.Cog):
         !exchange 10 GLD SRC
         """
 
-        def load_exchange_data():
-            with open(self.EXCHANGE_PATH, "r") as exchange_file:
-                return json.load(exchange_file)
-
         user_id = str(ctx.author.id)
-        exchange_data = load_exchange_data()
+        exchange_data = self.load_exchange_data()
 
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
@@ -196,6 +206,21 @@ class Economy(commands.Cog):
         else:
             await ctx.send("Invalid or unsupported currencies.")
 
+    @commands.command(aliases=["er"])
+    async def exchange_rate(self, ctx):
+        """
+        Display the current exchange rates!
+
+        Example usage:
+        !exchange_rate
+        """
+        exchange_data = self.load_exchange_data()
+        message = f"The current exchange rates are:"
+        embed = discord.Embed(title="Hourly Rate Update", color=0x00ff00, description=message)  # Green
+        for c, r in exchange_data.items():
+            embed.add_field(name=c, value=f"{r:,.3f},", inline=True)
+
+        await ctx.send(embed=embed)
 
     @commands.command(aliases=["rh", "history"])
     async def rate_history(self, ctx):
@@ -222,9 +247,24 @@ class Economy(commands.Cog):
     @commands.command(aliases=["wealthy"])
     async def richest(self, ctx):
         """
-        Display the richest people in the server keeping exact funds private.
+        Display the richest person in the server keeping indentity private.
+
+        Example usage:
+        !richest
         """
-        return
+        max_gold = 0
+        with open(self.WALLET_PATH, "r") as f:
+            wallets = json.load(f)
+        exchange_rates = self.load_exchange_data()
+        for user, wallet in wallets.items():
+            gold = 0
+            for currency_name, quantity in wallet.items():
+                gold += exchange_rates.get(currency_name, 0) * quantity
+            
+            if gold > max_gold:
+                max_gold = gold
+        
+        await ctx.send(f"The richest member currently has a total worth of {max_gold:,.3f} GLD!")
 
 async def setup(bot: commands.bot):
         await bot.add_cog(Economy(bot))

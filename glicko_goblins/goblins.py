@@ -224,9 +224,9 @@ class Fighter:
         """
         Calculate winrate.
         """
-        if len(self.games) > 0:
-            return self.wins/len(self.games)
-
+        if self.total_games > 0:
+            return self.wins/self.total_games
+        return 0
 
     ## STR METHODS FOR VIEWING GOBLIN INFO ##
     def describe(self) -> str:
@@ -293,6 +293,8 @@ class Fighter:
         ax_polar.set_xticklabels([k.replace("_prob", "").title() for k in bp.keys()])
         ax_polar.set_yticklabels([])
         ax_polar.spines['polar'].set_visible(False)
+
+        plt.suptitle(self.name)
 
         return fig
 
