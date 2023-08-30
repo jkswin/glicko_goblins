@@ -60,9 +60,9 @@ class Economy(commands.Cog):
             users = json.load(f)
         user = str(ctx.author.id)
         if user in users:
-            embed = discord.Embed(title=f"{ctx.author}'s Balance", color=0xcc0000) 
+            embed = discord.Embed(title=f"{ctx.author}'s Balance\n(Values rounded to 4DP)", color=0xcc0000) 
             for currency, amount in users[user].items():
-                embed.add_field(name=currency, value=f"{amount:,.2f}", inline=True)
+                embed.add_field(name=currency, value=f"{amount:,.4f}", inline=True)
             await ctx.send(embed=embed)
 
         else:
@@ -109,25 +109,28 @@ class Economy(commands.Cog):
             users = json.load(f)
         if user_id in users:
             success = bool(random.randint(0,1))
+            with open(self.KITTY_PATH, "r") as f:
+                    kitty = json.load(f)
             if success:
-                amount = random.randint(1,10)
+                upper_limit = kitty["tax"]//4
+                amount = random.randint(1,max([2, upper_limit]))
+                kitty["tax"] -= amount
                 users[user_id]["GLD"] += amount
                 with open(self.WALLET_PATH, "w") as f:
                     json.dump(users, f)
                 await ctx.send(f"{ctx.author} stole {amount} GLD from a passerby!")
 
             else:
-                gold_in_wallet = self.wallet_to_gold(users[user_id])
+                gold_in_wallet = self.wallet_to_gold(users[str(user_id)])
                 del users[user_id]
                 with open(self.WALLET_PATH, "w") as f:
                     json.dump(users, f)
-                with open(self.KITTY_PATH, "r") as f:
-                    kitty = json.load(f)
                 kitty["tax"] += gold_in_wallet
-                with open(self.KITTY_PATH, "w") as f:
-                    json.dump(kitty, f)
 
-                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")      
+                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")
+
+            with open(self.KITTY_PATH, "w") as f:
+                    json.dump(kitty, f)    
             
         else:
             await ctx.send("You don't have a wallet to add money to!")
@@ -222,7 +225,7 @@ class Economy(commands.Cog):
                         with open(self.KITTY_PATH, "w") as f:
                             json.dump(kitty, f)
 
-                        await ctx.send(f"Successfully exchanged **{amount:,} {from_currency}** to **{after_vat:,.2f} {to_currency}**\n(Tax Paid: {exchanged_amount - after_vat:,.2f} {to_currency} or {tax_in_gold:,.3f} GLD). ")
+                        await ctx.send(f"Successfully exchanged **{amount:,} {from_currency}** to **{after_vat:,.4f} {to_currency}**\nat a rate of roughly {from_rate/to_rate:,.4f}\n(Tax Paid: {exchanged_amount - after_vat:,.4f} {to_currency} or {tax_in_gold:,.4f} GLD). ")
                     else:
                         await ctx.send(f"You don't have enough {from_currency} to perform this exchange.")
                 else:
