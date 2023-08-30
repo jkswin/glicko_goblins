@@ -21,15 +21,15 @@ cfg = dotenv_values(".env")
 utc = datetime.timezone.utc
 
 # when tournaments kick off
-start_time = datetime.time(hour=20, minute=45, tzinfo=utc)
+start_time = datetime.time(hour=18, minute=52, tzinfo=utc)
 
 # When combats happen
-tourn_times = [datetime.time(hour=21, minute=30, tzinfo=utc),
+tourn_times = [datetime.time(hour=19, minute=30, tzinfo=utc),
+               datetime.time(hour=20, tzinfo=utc),
+               datetime.time(hour=20, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
+               datetime.time(hour=21, tzinfo=utc),
+               datetime.time(hour=21, minute=30, tzinfo=utc),
                datetime.time(hour=22, tzinfo=utc),
-               datetime.time(hour=22, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
-               datetime.time(hour=23, tzinfo=utc),
-               datetime.time(hour=23, minute=30, tzinfo=utc),
-               datetime.time(hour=00, tzinfo=utc),
                ]
 
 backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24)]
