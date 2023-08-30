@@ -206,7 +206,9 @@ class Background(commands.Cog):
         with open(self.history_path, "w") as f:
             json.dump(history, f)
 
-        if new_rates == previous_rates:
+        # suppress posting rating updates if there isn't a change of more than 0.5% anywhere
+        if all([np.absolute(new_rates[curr] - previous_rates[curr]) < previous_rates[curr]/200 
+                for curr in new_rates.keys()]):
             return
 
         for guild in self.bot.guilds:
