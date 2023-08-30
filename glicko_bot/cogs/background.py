@@ -21,10 +21,18 @@ cfg = dotenv_values(".env")
 utc = datetime.timezone.utc
 
 # when tournaments kick off
-start_time = datetime.time(hour=18, minute=52, tzinfo=utc)
+start_time = [datetime.time(hour=12, minute=30, tzinfo=utc),
+              datetime.time(hour=18, minute=30, tzinfo=utc)]
 
 # When combats happen
-tourn_times = [datetime.time(hour=19, minute=30, tzinfo=utc),
+tourn_times = [datetime.time(hour=13, minute=30, tzinfo=utc),
+               datetime.time(hour=14, tzinfo=utc),
+               datetime.time(hour=14, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
+               datetime.time(hour=15, tzinfo=utc),
+               datetime.time(hour=15, minute=30, tzinfo=utc),
+               datetime.time(hour=16, tzinfo=utc),
+    
+               datetime.time(hour=19, minute=30, tzinfo=utc),
                datetime.time(hour=20, tzinfo=utc),
                datetime.time(hour=20, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
                datetime.time(hour=21, tzinfo=utc),
@@ -45,6 +53,7 @@ class Background(commands.Cog):
         self.update_exchange_rate.start()
         self.init_tournament.start()
         self.backup_data.start()
+        self.run_tournament.start()#############
 
         self.tournament = None
         self.accepting_sponsors = True
@@ -65,14 +74,19 @@ class Background(commands.Cog):
 
     @tasks.loop(time=tourn_times)
     async def run_tournament(self):
-        self.tournament = Tournament.from_save(self.tournament_path)
+        try:
+            self.tournament = Tournament.from_save(self.tournament_path)
+        except FileNotFoundError:
+            # if the bot starts at a datetime where Tournament has not been created yet
+            return
+        
         self.tournament.run_day()
         self.tournament.save(self.tournament_path)
 
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = "Some tournament results are in!\nType !scout to see how they're doing!"
+                message = "Some tournament results are in!\nType !scout to see how they're doing!\n"
                 await channel.send(message)
 
         with open(self.user_path, "r") as f:
@@ -90,13 +104,17 @@ class Background(commands.Cog):
                 pre_payout = goblin.funding * goblin.winrate() * tournament_table.shape[0]/position
                 payout = pre_payout * (1 - self.tax)
                 kitty["tax"] += pre_payout - payout
-                manager_id = discord.utils.get(self.bot.users, name=goblin.manager).id
-                users[str(manager_id)]["GLD"] += payout
-                goblin.earnings += payout
+                manager_id = str(discord.utils.get(self.bot.users, name=goblin.manager).id)
+                if manager_id in users.keys():
+                    users[manager_id]["GLD"] += payout
+                    goblin.earnings += payout
 
-                output += f"{goblin.manager} earned {payout:,.2f} GLD from {goblin.name}'s performance!\n"
+                    output += f"**{goblin.manager}** earned **{payout:,.2f}** GLD from **{goblin.name}**'s performance!\\n"
+                else:
+                    output += f"**{goblin.manager}** doesn't have a wallet and so {goblin.name}'s earnings were transferred to the state.\n\n"
+                    kitty["tax"] += payout
 
-
+        self.tournament.save(self.tournament_path)
         with open(self.user_path, "w") as f:
             json.dump(users, f)
 
@@ -113,15 +131,14 @@ class Background(commands.Cog):
                 
     @tasks.loop(time=start_time)
     async def init_tournament(self):
-        self.run_tournament.cancel()
-        self.tournament = Tournament(participants=50,
-                                        daily_combats=50,
+        self.tournament = Tournament(participants=70,
+                                        daily_combats=100,
                                         daily_mortalities=0,
                                         )
         with open(self.kitty_path, "r") as f:
             tax = json.load(f)["tax"]
 
-        for fighter in self.tournament:
+        for fighter in self.tournament.fighters:
             fighter.funding += tax//10
 
         self.tournament.run_day()
@@ -130,7 +147,7 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"@everyone __It's {start_time.strftime('%H:%M')} UTC so the daily tournament has started!__\n\n \nYou have 30 minutes to choose any sponsorships!\n Call *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!"
+                message = f"@everyone **It's {start_time.strftime('%H:%M')} UTC so a new tournament has started!**\n\nYou have **30 minutes** to choose any sponsorships!\nCall *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!"
                 await channel.send(message)
         
         self.bot.accepting_sponsors = True
@@ -139,12 +156,11 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"The sponsor window has now closed!\nThere will be {len(tourn_times)} combats per day. Sponsors will earn some GLD after each combat!"
+                message = f"The sponsor window has now closed!\nThere will be **{len(tourn_times)}** rounds per day. Each round will be {self.tournament.daily_combats} battles.\nSponsors will earn some GLD after each combat!"
                 message += "\nFights are happening at:\n" + "\n".join([t.strftime("%H:%M") + " UTC" for t in tourn_times])
                 await channel.send(message)
 
         self.bot.accepting_sponsors = False
-        self.run_tournament.start()
         
 
     @tasks.loop(minutes=5)
@@ -208,8 +224,8 @@ class Background(commands.Cog):
 
     @tasks.loop(time=backup_times)
     async def backup_data(self):
-        source_directory = 'glicko_bot/cogs/data'
-        backup_directory = 'glicko_bot/cogs/backup'
+        source_directory = 'glicko_bot/data'
+        backup_directory = 'glicko_bot/backup'
         
         # Remove the existing backup directory if it exists
         if os.path.exists(backup_directory):
