@@ -47,7 +47,9 @@ class Background(commands.Cog):
         self.exchange_path = "glicko_bot/data/exchange.json"
         self.history_path = "glicko_bot/data/exchange_history.json"
         self.user_path = "glicko_bot/data/users.json"
+        self.kitty_path = "glicko_bot/data/kitty.json"
         self.summoners = json.loads(cfg["SUMMONERS"])
+        self.tax = 0.02
 
     def cog_unload(self):
         self.update_exchange_rate.cancel()
@@ -70,13 +72,18 @@ class Background(commands.Cog):
         with open(self.user_path, "r") as f:
             users = json.load(f)
 
+        with open(self.kitty_path, "r") as f:
+            kitty = json.load(f)
+
         tournament_table = pd.DataFrame(self.tournament.fighter_info()).sort_values("mean_outcome")
         rankings = tournament_table["tourn_id"].tolist()
         output = ""
         for goblin in self.tournament.fighters:
             if goblin.manager != None:
                 position = rankings.index(goblin.tourn_id)
-                payout = goblin.funding * goblin.winrate() * tournament_table.shape[0]/position
+                pre_payout = goblin.funding * goblin.winrate() * tournament_table.shape[0]/position
+                payout = pre_payout * (1 - self.tax)
+                kitty["tax"] += pre_payout - payout
                 manager_id = discord.utils.get(self.bot.users, name=goblin.manager).id
                 users[str(manager_id)]["GLD"] += payout
 
@@ -85,6 +92,9 @@ class Background(commands.Cog):
 
         with open(self.user_path, "w") as f:
             json.dump(users, f)
+
+        with open(self.kitty_path, "w") as f:
+            json.dump(kitty, f)
 
         if output != "":
             for guild in self.bot.guilds:
@@ -165,6 +175,9 @@ class Background(commands.Cog):
 
         with open(self.history_path, "w") as f:
             json.dump(history, f)
+
+        if new_rates == previous_rates:
+            return
 
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)

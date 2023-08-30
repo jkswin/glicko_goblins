@@ -28,6 +28,7 @@ class Economy(commands.Cog):
         self.WALLET_PATH = "glicko_bot/data/users.json"
         self.EXCHANGE_PATH = "glicko_bot/data/exchange.json"
         self.HISTORY_PATH = "glicko_bot/data/exchange_history.json"
+        self.KITTY_PATH = "glicko_bot/data/kitty.json"
         self.summoners = json.loads(cfg["SUMMONERS"]) #TODO: Make the default wallet load in all currencies from the .env
         self.tax = 0.02
         self.channel_name = "general"
@@ -116,10 +117,17 @@ class Economy(commands.Cog):
                 await ctx.send(f"{ctx.author} stole {amount} GLD from a passerby!")
 
             else:
+                gold_in_wallet = self.wallet_to_gold(users[user_id])
                 del users[user_id]
                 with open(self.WALLET_PATH, "w") as f:
                     json.dump(users, f)
-                await ctx.send(f"{ctx.author}'s wallet was stolen")      
+                with open(self.KITTY_PATH, "r") as f:
+                    kitty = json.load(f)
+                kitty["tax"] += gold_in_wallet
+                with open(self.KITTY_PATH, "w") as f:
+                    json.dump(kitty, f)
+
+                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")      
             
         else:
             await ctx.send("You don't have a wallet to add money to!")
@@ -138,12 +146,16 @@ class Economy(commands.Cog):
         if amount <= 0.001:
             await ctx.send("Invalid amount.")
             return
+        
+        user = str(ctx.author.id)
+        target_user = str(member.id)
+
+        if user == target_user:
+            await ctx.send("You can't send money to yourself!")
+            return
 
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
-
-        user = str(ctx.author.id)
-        target_user = str(member.id)
 
         if user in users and target_user in users:
             if users[user]["GLD"] >= amount:
@@ -195,10 +207,22 @@ class Economy(commands.Cog):
                         after_vat = exchanged_amount * (1 - self.tax)
                         users[user_id][to_currency] += after_vat
 
+                        tax_taken = exchanged_amount - after_vat
+                        tax_in_gold = tax_taken * to_rate
+
                         with open(self.WALLET_PATH, "w") as f:
                             json.dump(users, f)
 
-                        await ctx.send(f"Successfully exchanged {amount:,} {from_currency} to {after_vat:,.2f} {to_currency} (Tax Paid: {exchanged_amount - after_vat:,.2f} {to_currency}). ")
+                        # add tax to the kitty
+                        with open(self.KITTY_PATH, "r") as f:
+                            kitty = json.load(f)
+
+                        kitty["tax"] += tax_in_gold
+
+                        with open(self.KITTY_PATH, "w") as f:
+                            json.dump(kitty, f)
+
+                        await ctx.send(f"Successfully exchanged **{amount:,} {from_currency}** to **{after_vat:,.2f} {to_currency}**\n(Tax Paid: {exchanged_amount - after_vat:,.2f} {to_currency} or {tax_in_gold:,.3f} GLD). ")
                     else:
                         await ctx.send(f"You don't have enough {from_currency} to perform this exchange.")
                 else:
@@ -223,15 +247,21 @@ class Economy(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["rh", "history"])
-    async def rate_history(self, ctx):
+    async def rate_history(self, ctx, currency: str = commands.parameter(description="Display only a specified currency", default="")):
         """
         Display a graph of currency values over time.
+        Specify a currency to only see a graph of that currency.
 
         Example usage:
         !rate_history
+        !rate_history GRC
         """
         #TODO: add optional window param to control timeseries groupings 
         df = pd.read_json(self.HISTORY_PATH).T
+
+        if currency in df.columns:
+            df = df[[currency]]
+            
         plt.figure(figsize=(15, 8))
         sns.lineplot(df)
         plt.ylabel("Value in Gold (GLD)")
@@ -255,16 +285,38 @@ class Economy(commands.Cog):
         max_gold = 0
         with open(self.WALLET_PATH, "r") as f:
             wallets = json.load(f)
-        exchange_rates = self.load_exchange_data()
         for user, wallet in wallets.items():
-            gold = 0
-            for currency_name, quantity in wallet.items():
-                gold += exchange_rates.get(currency_name, 0) * quantity
+            gold = self.wallet_to_gold(wallet)
             
             if gold > max_gold:
                 max_gold = gold
         
         await ctx.send(f"The richest member currently has a total worth of {max_gold:,.3f} GLD!")
+    
+    @commands.command()
+    async def tax(self, ctx):
+        """
+        Display how much tax has been collected so far.
+        Tax is collected when making exchanges and when sponsored goblins return funds.
 
+        Example usage:
+        !tax
+        """
+        max_gold = 0
+        with open(self.KITTY_PATH, "r") as f:
+            kitty = json.load(f)
+        await ctx.send(f"Current Tax pool: {kitty['tax']:,.3f} GLD!")
+        
+
+    def wallet_to_gold(self, wallet: json) -> float:
+        """
+        Takes a wallet, converts its contents to GLD and returns the value.
+        """
+        exchange_rates = self.load_exchange_data()
+        gold = 0
+        for currency, quantity in wallet.items():
+            gold += quantity * exchange_rates.get(currency, 0)
+        return gold
+    
 async def setup(bot: commands.bot):
         await bot.add_cog(Economy(bot))
