@@ -33,21 +33,27 @@ class Sponsor(commands.Cog):
         self.user_path = "glicko_bot/data/users.json"
 
     @commands.command()
-    async def scout(self, ctx):
+    async def scout(self, ctx, my_fighters: str = commands.parameter(description="Add 'me' if you only want to display fighters you manage!", default=None)):
             """
             View the tournament participants.
 
             Example usage:
             !scout
+            !scout me
             """
-            # Display the current tournament.
             if not os.path.exists(self.tournament_path):
-                  return
+                await ctx.send("There isn't an ongoing tournament right now!")
+                return
             
             goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
-            goblins = goblins[["tourn_id", "name", "manager", "funding", "wins", "total_games"]]
+            goblins["losses"] = goblins["total_games"] - goblins["wins"]
+            goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings", "wins", "losses", "rating", "rating_deviation"]]
 
-            split_size = 15
+            if my_fighters.strip() == "me":
+                 author = ctx.message.author.name
+                 goblins = goblins.query(f"manager == '{author}'")
+
+            split_size = 10
             num_splits = (len(goblins) + split_size - 1) // split_size
 
             # Split the original DataFrame into smaller DataFrames
@@ -64,6 +70,10 @@ class Sponsor(commands.Cog):
         Example usage:
         !goblin 56
         """
+        if not os.path.exists(self.tournament_path):
+            await ctx.send("There isn't an ongoing tournament right now!")
+            return
+        
         tourn = Tournament.from_save(self.tournament_path)
         for goblin in tourn.fighters:
             if goblin.tourn_id == tourn_id:
