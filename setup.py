@@ -10,9 +10,9 @@ import warnings
 data_path = "glicko_bot/data"
 backup_path = "glicko_bot/backup"
 data_stores = {"exchange_history.json": {},
-               "exchange.json": {"GLD":0, "SRC":0, "GRC":1},
+               "exchange.json": {"GLD":1, "SRC":1, "GRC":1},
                 "users.json": {},
-                "kitty.json": {"tax":1000}
+                "kitty.json": {"tax":100}
                 }
 
 

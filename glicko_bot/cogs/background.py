@@ -185,21 +185,22 @@ class Background(commands.Cog):
                     else:
                         totals[currency] += quantity
 
-        log_totals = {currency: np.log10(0.000001 + quantity) for currency, quantity in totals.items()}
+        log_totals = {currency: np.log10(1 + quantity) for currency, quantity in totals.items()}
 
         new_rates = {key: np.max((new_rates[key] - log_totals[key], 0.0001))
                        for key in totals.keys()}
 
         rates.update(new_rates)
+        str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        
         with open("rate_update.log", "a") as f:
-            f.write(f"New Rates before circulation adjustment:{new_rates_copy}\nTotal of each currency in server: {totals}\nLogarithm of totals: {log_totals}\nUpdated rates: {new_rates}\n\n\n")
+            f.write(f"{str_time}\nNew Rates before circulation adjustment:{new_rates_copy}\nTotal of each currency in server: {totals}\nLogarithm of totals: {log_totals}\nUpdated rates: {new_rates}\n\n\n")
         
         with open(self.exchange_path, "w") as f:
             json.dump(rates, f)
         
         with open(self.history_path, "r") as f:
             history = json.load(f)
-            str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
             history[str_time] = rates
 
         with open(self.history_path, "w") as f:
