@@ -50,11 +50,9 @@ async def fetch_data(session, url):
 async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
     summoner_url = f"/lol/summoner/v4/summoners/by-name/{summoner}"
     response = await fetch_data(session, ROUTE + summoner_url)
-    
-    summoner_id = response.get("id", False)
-
-    if not summoner_id:
+    if not response:
         return False
+    summoner_id = response.get("id", False)
 
     if queue_type == "tft":
         ranked_url = f"/tft/league/v1/entries/by-summoner/{summoner_id}"

@@ -49,7 +49,7 @@ class Sponsor(commands.Cog):
             goblins["losses"] = goblins["total_games"] - goblins["wins"]
             goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings", "wins", "losses", "rating", "rating_deviation"]]
 
-            if my_fighters.strip() == "me":
+            if my_fighters == "me":
                  author = ctx.message.author.name
                  goblins = goblins.query(f"manager == '{author}'")
 

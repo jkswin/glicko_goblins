@@ -83,7 +83,7 @@ class Economy(commands.Cog):
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
         if user_id not in users:
-            users[user_id] = {"GLD": 5}
+            users[user_id] = {"GLD": 0}
             for currency in self.summoners:
                 currency_name = currency[0]
                 users[user_id].update({currency_name:0})
@@ -111,7 +111,7 @@ class Economy(commands.Cog):
             success = bool(random.randint(0,1))
             with open(self.KITTY_PATH, "r") as f:
                     kitty = json.load(f)
-            if success:
+            if success and kitty["tax"] > 10:
                 upper_limit = kitty["tax"]//4
                 amount = random.randint(1,max([2, upper_limit]))
                 kitty["tax"] -= amount
@@ -305,7 +305,6 @@ class Economy(commands.Cog):
         Example usage:
         !tax
         """
-        max_gold = 0
         with open(self.KITTY_PATH, "r") as f:
             kitty = json.load(f)
         await ctx.send(f"Current Tax pool: {kitty['tax']:,.3f} GLD!")
