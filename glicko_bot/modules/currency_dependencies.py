@@ -8,14 +8,12 @@ RIOT PERSONAL API RATE LIMITS
 100 requests every 2 minutes(s)
 """
 
-import requests
 import aiohttp
 import asyncio
 from dotenv import dotenv_values
 import json
 import numpy as np
 import random
-import os
 
 
 ROUTE = "https://euw1.api.riotgames.com"
@@ -45,13 +43,18 @@ summoners = json.loads(cfg["SUMMONERS"])
 
 async def fetch_data(session, url):
     async with session.get(url, headers={"X-Riot-Token": cfg["RIOT"]}) as response:
-        return await response.json()
+        if response.status == 200:
+            return await response.json()
+        return []
 
 async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
     summoner_url = f"/lol/summoner/v4/summoners/by-name/{summoner}"
     response = await fetch_data(session, ROUTE + summoner_url)
     
-    summoner_id = response["id"]
+    summoner_id = response.get("id", False)
+
+    if not summoner_id:
+        return False
 
     if queue_type == "tft":
         ranked_url = f"/tft/league/v1/entries/by-summoner/{summoner_id}"
@@ -64,6 +67,10 @@ async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
 
     else:
         raise ValueError("queue_type must be one of ['lol', 'tft']")
+    
+    if not bool(ranked_info):
+        return False
+    
     tier = ranked_info["tier"]
     rank = N2I.get(ranked_info["rank"]) 
     lp = ranked_info["leaguePoints"]
@@ -81,6 +88,8 @@ async def calculate_currency(tier, rank, lp, wins, losses, noise, session):
         value = base_value + ((4 * lp) / 100)
     else:
         response = await fetch_data(url=ROUTE + f"/tft/league/v1/challenger", session=session)
+        if not response:
+            return False
         lps = [val["leaguePoints"] for val in response["entries"]]
         average_challenger = np.mean(lps)
         top_player_lp = np.max(lps)
@@ -98,5 +107,5 @@ async def currency_query(summoners, noise=True):
     async with aiohttp.ClientSession() as session:
         tasks = [tft_to_currency(session, queue_type, summoner, noise=noise) for currency_str, summoner, queue_type in summoners]
         results = await asyncio.gather(*tasks)
-        return {summoner[0]: result for summoner, result in zip(summoners, results)}
+        return {summoner[0]: result for summoner, result in zip(summoners, results) if result}
             
