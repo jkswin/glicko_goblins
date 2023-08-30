@@ -163,7 +163,7 @@ class Background(commands.Cog):
         self.bot.accepting_sponsors = False
         
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(seconds=125)
     async def update_exchange_rate(self):
 
         with open(self.exchange_path, "r") as f:
@@ -192,7 +192,7 @@ class Background(commands.Cog):
 
         rates.update(new_rates)
         str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        
+
         with open("rate_update.log", "a") as f:
             f.write(f"{str_time}\nNew Rates before circulation adjustment:{new_rates_copy}\nTotal of each currency in server: {totals}\nLogarithm of totals: {log_totals}\nUpdated rates: {new_rates}\n\n\n")
         
