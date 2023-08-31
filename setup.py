@@ -9,6 +9,8 @@ import warnings
 
 data_path = "glicko_bot/data"
 backup_path = "glicko_bot/backup"
+tourn_archive_path = "glicko_bot/data/archive"
+
 data_stores = {"exchange_history.json": {},
                "exchange.json": {"GLD":1, "SRC":1, "GRC":1},
                 "users.json": {},
@@ -35,6 +37,14 @@ if __name__ == "__main__":
     if not os.path.exists(data_path):
         print("Creating data directory...")
         os.mkdir(data_path)
+        print("Done")
+    else:
+        print(f"{data_path} already exists.")
+
+    # try create archive directory
+    if not os.path.exists(tourn_archive_path):
+        print("Creating archive directory...")
+        os.mkdir(tourn_archive_path)
         print("Done")
     else:
         print(f"{data_path} already exists.")
