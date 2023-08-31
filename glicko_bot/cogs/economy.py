@@ -106,6 +106,13 @@ class Economy(commands.Cog):
         Example usage:
         !steal 
         """
+        def steal_calc(tax, user_gold, size=1):
+            upper_bound = np.min((int(tax) - 9, int(user_gold) + 9))
+            lower_bound = np.ceil(upper_bound/2)
+            probabilities = np.exp(-np.arange(lower_bound, upper_bound+1)/1000)
+            probabilities /= probabilities.sum()
+            return int(np.random.choice(np.arange(lower_bound,upper_bound+1), size=size, p=probabilities))
+
         user_id = str(ctx.author.id)
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
@@ -115,11 +122,7 @@ class Economy(commands.Cog):
                     kitty = json.load(f)
             if success and kitty["tax"] > 10:
                 # calculate steal amount
-                upper_bound = np.min((int(kitty["tax"]) - 9, int(users[user_id]["GLD"])))
-                probabilities = np.exp(-np.arange(upper_bound)/2)
-                probabilities /= probabilities.sum()
-                amount = np.random.choice(np.arange(1,upper_bound+1), size=1, p=probabilities)
-                ##########
+                amount = steal_calc(kitty["tax"], users[user_id]["GLD"], size=1)
                 kitty["tax"] -= amount
                 users[user_id]["GLD"] += amount
                 with open(self.WALLET_PATH, "w") as f:
@@ -133,29 +136,13 @@ class Economy(commands.Cog):
                     json.dump(users, f)
                 kitty["tax"] += gold_in_wallet
 
-                with open(self.ART_PATH, "r") as f:
-                    art_list = [json.loads(art) for art in f.readlines()]
-                for art in art_list:
-                    if art["owner"] == ctx.author:
-                        art.update({"owner": "",
-                                    "for_sale": 1,
-                                    "base_price": kitty["tax"]//10
-                                    })
-                        
-                with open(self.ART_PATH, "w") as f:
-                    print(art_list)
-                    for art in art_list:
-                        json.dump(art, f)
-                        f.write("\n")
-
-                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.\nAlso their belongings have been put up for auction...")
+                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")
 
             with open(self.KITTY_PATH, "w") as f:
                     json.dump(kitty, f)    
             
         else:
             await ctx.send("You don't have a wallet to add money to!")
-
 
     @commands.command(aliases=["gg"])
     async def give_gold(self, ctx, 
