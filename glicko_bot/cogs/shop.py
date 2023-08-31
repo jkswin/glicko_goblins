@@ -8,6 +8,7 @@ TODO: It is currently a bad bad system that keeps everything in JSON and loops t
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 import json
 import os
 import seaborn as sns
@@ -124,6 +125,7 @@ class Shop(commands.Cog):
         await ctx.send(f"I don't seem to have that registered?")
         return
     
+    @commands.cooldown(1, 30, BucketType.user)
     @commands.command()
     async def sell(self, ctx, uid: int = commands.parameter(description="The unique id of the art.", default=0), price: float = commands.parameter(description="The price in GLD.", default=1000)):
         """

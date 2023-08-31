@@ -18,7 +18,7 @@ utc = datetime.timezone.utc
 # when tournaments kick off
 start_time = [datetime.time(hour=0, minute=35, tzinfo=utc),
               datetime.time(hour=12, minute=30, tzinfo=utc),
-              datetime.time(hour=18, minute=30, tzinfo=utc),
+              datetime.time(hour=19, tzinfo=utc),
             ]
 
 # When combats happen
@@ -36,7 +36,7 @@ tourn_times = [
                datetime.time(hour=15, minute=35, tzinfo=utc),
                datetime.time(hour=16, tzinfo=utc),
     
-               datetime.time(hour=19, minute=30, tzinfo=utc),
+               datetime.time(hour=19, minute=35, tzinfo=utc),
                datetime.time(hour=20, tzinfo=utc),
                datetime.time(hour=20, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
                datetime.time(hour=21, tzinfo=utc),
@@ -46,6 +46,7 @@ tourn_times = [
 
 backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24) if i%6==0]
 
+credit_times = [datetime.time(hour=18, minute=24, tzinfo=utc)]
 
 class Background(commands.Cog):
     
@@ -57,6 +58,7 @@ class Background(commands.Cog):
         self.init_tournament.start()
         self.backup_data.start()
         self.run_tournament.start()#############
+        self.credit.start()
 
         self.tournament = None
         self.accepting_sponsors = True
@@ -74,6 +76,7 @@ class Background(commands.Cog):
         self.init_tournament.cancel()
         self.run_tournament.cancel()
         self.backup_data.cancel()
+        self.credit.cancel()
 
     @tasks.loop(time=tourn_times)
     async def run_tournament(self):
@@ -262,6 +265,49 @@ class Background(commands.Cog):
         
         print("Backup completed.")
 
+    @tasks.loop(time=credit_times)
+    async def credit(self):
+        with open(self.user_path, "r") as f, open(self.kitty_path, "r") as f2:
+            users = json.load(f)
+            tax_pool = json.load(f2)
+        
+        user_golds = {user:self.wallet_to_gold(g) for user, g in users.items()}
+        total_credit = tax_pool["tax"]//200
+        users_total = sum(user_golds.values())
+        payouts = {k:(1-(v/users_total))*total_credit for k,v in user_golds.items()}
+        
+        for user in payouts:
+            users[user]["GLD"] += payouts[user]
+        
+        tax_pool["tax"] -= total_credit
+
+        with open(self.user_path, "w") as f:
+            json.dump(users, f)
+           
+        with open(self.kitty_path, "w") as f:
+            json.dump(tax_pool, f)
+
+        for guild in self.bot.guilds:
+            channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+            if channel:
+                message = f"@everyone Credit has been distributed. Check your wallets!"
+                await channel.send(message)
+
+    def load_exchange_data(self):
+            with open(self.exchange_path, "r") as exchange_file:
+                return json.load(exchange_file)   
+
+    def wallet_to_gold(self, wallet: json) -> float:
+        """
+        Takes a wallet, converts its contents to GLD and returns the value.
+        """
+        exchange_rates = self.load_exchange_data()
+        gold = 0
+        for currency, quantity in wallet.items():
+            gold += quantity * exchange_rates.get(currency, 0)
+        return gold
+
+    @credit.before_loop
     @init_tournament.before_loop
     @run_tournament.before_loop
     @update_exchange_rate.before_loop
