@@ -16,6 +16,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 from dotenv import dotenv_values
+import numpy as np
 
 sns.set_theme()
 cfg = dotenv_values(".env")
@@ -29,6 +30,7 @@ class Economy(commands.Cog):
         self.EXCHANGE_PATH = "glicko_bot/data/exchange.json"
         self.HISTORY_PATH = "glicko_bot/data/exchange_history.json"
         self.KITTY_PATH = "glicko_bot/data/kitty.json"
+        self.ART_PATH = "glicko_bot/data/art/founding_collection/metadata.jsonl"
         self.summoners = json.loads(cfg["SUMMONERS"]) #TODO: Make the default wallet load in all currencies from the .env
         self.tax = 0.02
         self.channel_name = "general"
@@ -112,8 +114,12 @@ class Economy(commands.Cog):
             with open(self.KITTY_PATH, "r") as f:
                     kitty = json.load(f)
             if success and kitty["tax"] > 10:
-                upper_limit = kitty["tax"]//4
-                amount = random.randint(1,max([2, upper_limit]))
+                # calculate steal amount
+                upper_bound = np.min((int(kitty["tax"]) - 9, int(users[user_id]["GLD"])))
+                probabilities = np.exp(-np.arange(upper_bound)/2)
+                probabilities /= probabilities.sum()
+                amount = np.random.choice(np.arange(1,upper_bound+1), size=1, p=probabilities)
+                ##########
                 kitty["tax"] -= amount
                 users[user_id]["GLD"] += amount
                 with open(self.WALLET_PATH, "w") as f:
@@ -127,7 +133,22 @@ class Economy(commands.Cog):
                     json.dump(users, f)
                 kitty["tax"] += gold_in_wallet
 
-                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")
+                with open(self.ART_PATH, "r") as f:
+                    art_list = [json.loads(art) for art in f.readlines()]
+                for art in art_list:
+                    if art["owner"] == ctx.author:
+                        art.update({"owner": "",
+                                    "for_sale": 1,
+                                    "base_price": kitty["tax"]//10
+                                    })
+                        
+                with open(self.ART_PATH, "w") as f:
+                    print(art_list)
+                    for art in art_list:
+                        json.dump(art, f)
+                        f.write("\n")
+
+                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.\nAlso their belongings have been put up for auction...")
 
             with open(self.KITTY_PATH, "w") as f:
                     json.dump(kitty, f)    

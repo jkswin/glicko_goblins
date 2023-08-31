@@ -228,6 +228,18 @@ class Fighter:
         if self.total_games > 0:
             return self.wins/self.total_games
         return 0
+    
+    def winloss(self):
+        """
+        Calculate win loss ratio.
+        """
+        if self.total_games > 0:
+            wins = self.wins
+            losses = self.total_games - self.wins
+            if losses > 0:
+                wins/=losses
+            return wins
+        return 0
 
     ## STR METHODS FOR VIEWING GOBLIN INFO ##
     def describe(self) -> str:

@@ -83,6 +83,10 @@ class Tournament:
         with open(path, "wb") as f:
             pickle.dump(self, f)
 
+    def save_dict(self, path):
+        with open(path, "w") as f:
+            json.dump(self.fighter_info(), f)
+
     def hat_draw(self) -> list[int]:
         """
         Create a list of fighter indexes where idx, idx+1 is a pair of fighters who are going to fight.

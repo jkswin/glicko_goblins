@@ -1,8 +1,3 @@
-"""
-The background workings that affect currency values.
-"""
-
-
 import discord
 from discord.ext import commands, tasks
 import json
@@ -21,15 +16,24 @@ cfg = dotenv_values(".env")
 utc = datetime.timezone.utc
 
 # when tournaments kick off
-start_time = [datetime.time(hour=12, minute=30, tzinfo=utc),
-              datetime.time(hour=18, minute=30, tzinfo=utc)]
+start_time = [datetime.time(hour=0, minute=35, tzinfo=utc),
+              datetime.time(hour=12, minute=30, tzinfo=utc),
+              datetime.time(hour=18, minute=30, tzinfo=utc),
+            ]
 
 # When combats happen
-tourn_times = [datetime.time(hour=13, minute=30, tzinfo=utc),
+tourn_times = [
+               datetime.time(hour=1, minute=15, tzinfo=utc),
+               datetime.time(hour=1, minute=50, tzinfo=utc), # GMT is 1 hour ahead of this
+               datetime.time(hour=2, minute=15,tzinfo=utc),
+               datetime.time(hour=2, minute=45, tzinfo=utc),
+               datetime.time(hour=3, minute=15, tzinfo=utc),
+    
+               datetime.time(hour=13, minute=30, tzinfo=utc),
                datetime.time(hour=14, tzinfo=utc),
                datetime.time(hour=14, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
                datetime.time(hour=15, tzinfo=utc),
-               datetime.time(hour=15, minute=30, tzinfo=utc),
+               datetime.time(hour=15, minute=35, tzinfo=utc),
                datetime.time(hour=16, tzinfo=utc),
     
                datetime.time(hour=19, minute=30, tzinfo=utc),
@@ -40,8 +44,7 @@ tourn_times = [datetime.time(hour=13, minute=30, tzinfo=utc),
                datetime.time(hour=22, tzinfo=utc),
                ]
 
-backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24)]
-
+backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24) if i%6==0]
 
 
 class Background(commands.Cog):
@@ -62,6 +65,7 @@ class Background(commands.Cog):
         self.history_path = "glicko_bot/data/exchange_history.json"
         self.user_path = "glicko_bot/data/users.json"
         self.kitty_path = "glicko_bot/data/kitty.json"
+        self.archive_path = "glicko_bot/data/archive"
         self.summoners = json.loads(cfg["SUMMONERS"])
         self.tax = 0.02
 
@@ -70,7 +74,6 @@ class Background(commands.Cog):
         self.init_tournament.cancel()
         self.run_tournament.cancel()
         self.backup_data.cancel()
-
 
     @tasks.loop(time=tourn_times)
     async def run_tournament(self):
@@ -97,23 +100,28 @@ class Background(commands.Cog):
 
         tournament_table = pd.DataFrame(self.tournament.fighter_info()).sort_values("mean_outcome")
         rankings = tournament_table["tourn_id"].tolist()
-        output = ""
+        output = "\n"
+        total_round_tax = 0
         for goblin in self.tournament.fighters:
             if goblin.manager != None:
                 position = rankings.index(goblin.tourn_id)
-                pre_payout = goblin.funding * goblin.winrate() * tournament_table.shape[0]/position
-                payout = pre_payout * (1 - self.tax)
-                kitty["tax"] += pre_payout - payout
+                pre_payout = (goblin.funding * goblin.winloss() * tournament_table.shape[0]/position)/(goblin.eagerness + len(start_time))
+                payout = int(pre_payout * 0.5)
+                tax = pre_payout - payout
+                kitty["tax"] += tax
+                total_round_tax += tax
                 manager_id = str(discord.utils.get(self.bot.users, name=goblin.manager).id)
                 if manager_id in users.keys():
                     users[manager_id]["GLD"] += payout
                     goblin.earnings += payout
 
-                    output += f"**{goblin.manager}** earned **{payout:,.2f}** GLD from **{goblin.name}**'s performance!\\n"
+                    output += f"**{goblin.manager}** earned **{payout:,.2f}** GLD from **{goblin.name}**'s performance!\n\n"
                 else:
                     output += f"**{goblin.manager}** doesn't have a wallet and so {goblin.name}'s earnings were transferred to the state.\n\n"
                     kitty["tax"] += payout
+                    total_round_tax += payout
 
+        output += f"\n{total_round_tax} GLD was paid to the state in Tournament fairs."
         self.tournament.save(self.tournament_path)
         with open(self.user_path, "w") as f:
             json.dump(users, f)
@@ -126,13 +134,16 @@ class Background(commands.Cog):
                 channel = discord.utils.get(guild.text_channels, name=self.channel_name)
                 if channel:
                     await channel.send(output)
-
-        
                 
     @tasks.loop(time=start_time)
     async def init_tournament(self):
+        if self.tournament is not None:
+            str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            path = f"archive_tourn_{str_time}.json"
+            self.tournament.save_dict(path)
+
         self.tournament = Tournament(participants=70,
-                                        daily_combats=100,
+                                        daily_combats=50,
                                         daily_mortalities=0,
                                         )
         with open(self.kitty_path, "r") as f:
@@ -142,12 +153,13 @@ class Background(commands.Cog):
             fighter.funding += int(np.log2(tax))
 
         self.tournament.run_day()
+        self.tournament.daily_combats *= 2
         self.tournament.save(self.tournament_path)
 
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"@everyone **It's {start_time.strftime('%H:%M')} UTC so a new tournament has started!**\n\nYou have **30 minutes** to choose any sponsorships!\nCall *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!"
+                message = f"@everyone **A new tournament has started!**\n\nYou have **30 minutes** to choose any sponsorships!\nCall *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!\nThe current results are based on pre-tournament matches. Choose wisely!"
                 await channel.send(message)
         
         self.bot.accepting_sponsors = True
@@ -156,13 +168,12 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"The sponsor window has now closed!\nThere will be **{len(tourn_times)}** rounds per day. Each round will be {self.tournament.daily_combats} battles.\nSponsors will earn some GLD after each combat!"
-                message += "\nFights are happening at:\n" + "\n".join([t.strftime("%H:%M") + " UTC" for t in tourn_times])
+                message = f"The sponsor window has now closed!\nThere will be **{len(tourn_times)//len(start_time)}** rounds per tournament and {len(start_time)} tournaments today. Each round will be {self.tournament.daily_combats} battles.\nSponsors will earn some GLD after each combat!"
+                message += "\nTournament fights are happening today at:\n" + "\n".join([t.strftime("%H:%M") + " UTC" for t in tourn_times])
                 await channel.send(message)
 
         self.bot.accepting_sponsors = False
         
-
     @tasks.loop(seconds=125)
     async def update_exchange_rate(self):
 
@@ -214,7 +225,7 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"Here are the new rates as of {str_time}:"
+                message = f"*Note that updates of less than 0.5% are not shown*\nRates as of {str_time}:"
                 embed = discord.Embed(title="Rate Update", color=0x00ff00, description=message)  # Green
                 for pr, r in zip(previous_rates.items(), rates.items()):
                     if pr[0] != "GLD":

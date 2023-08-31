@@ -13,6 +13,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
+import numpy as np
 
 from glicko_goblins.combat import Tournament
 from glicko_goblins.goblins import Fighter
@@ -83,9 +84,51 @@ class Sponsor(commands.Cog):
                 buf.seek(0)
                 await ctx.send("Fighter breakdown:", file=discord.File(buf, "goblin.png"))
                 break
+
+    @commands.command()
+    async def roster(self, ctx):
+        """
+        Display the performance metrics of your active roster!
+
+        Example usage:
+        !roster
+        """
+        if not os.path.exists(self.tournament_path):
+            await ctx.send("There isn't an ongoing tournament right now!")
+            return
+            
+        goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
+        author = ctx.message.author.name
+        goblins.query(f"manager == '{author}'", inplace=True)
+        goblins["losses"] = goblins["total_games"] - goblins["wins"]
+        goblins["biggest_hit"] = goblins["damage_instances"].map(max)
+        goblins = goblins[["tourn_id", 
+                           "name", 
+                           "funding", 
+                           "earnings", 
+                           "wins", 
+                           "losses", 
+                           "rating", 
+                           "rating_deviation",
+                            "total_games",
+                            "swings",
+                            "guards_broken",
+                            "successful_guards",
+                            "failed_guards",
+                            "attacks_parried",
+                            "times_parried_by_opponent",
+                            "critical_hits",
+                            "attacks_dodged",
+                            "biggest_hit",
+                            ]]
+        await ctx.send(f"**{author}'s current roster:**")
+        for row_dict in goblins.to_dict(orient="records"):
+            embed = discord.Embed(title=f"{row_dict['name']}")
+            for k,v in row_dict.items():
+                if k != "name":
+                    embed.add_field(name=k.title(), value=int(v))
+            await ctx.send(embed=embed)
         
-    
-    #@commands.cooldown(3, 7200, BucketType.user)
     @commands.command(aliases=["fund", "invest"])
     async def sponsor(self, ctx, tourn_id: float = commands.parameter(description="The tourn_id of a goblin."), new_funds: float = commands.parameter(description="How much GLD to sponsor!")):
         """
@@ -99,6 +142,12 @@ class Sponsor(commands.Cog):
             return
         
         tourn = Tournament.from_save(self.tournament_path)
+        
+        managers = [fighter["manager"] for fighter in tourn.fighter_info()]
+        if managers.count(ctx.message.author.name) >= 3:
+            await ctx.send("You can't sponsor more than 3 goblins per tournament!")
+            return
+        
         for goblin in tourn.fighters:
             if goblin.tourn_id == tourn_id:
                 if goblin.manager == None:

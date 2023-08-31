@@ -140,20 +140,21 @@ class Shop(commands.Cog):
             if art.get("uid", False) == uid:
                 owner = art.get("owner", "")
                 if owner == ctx.message.author.name:
+                    previous_price = art["base_price"]
                     for_sale = art.get("for_sale", 0)
+                    art["base_price"] = price
+                    art["for_sale"] = 1
+
                     if not bool(for_sale):
-                        art["base_price"] = price
-                        art["for_sale"] = 1
-
                         await ctx.send(f"{ctx.message.author.name} listed {art['name']} for {price} GLD.\n Buy it while you can!")
-                        with open(path, "w") as f:
-                            for a in stock:
-                                json.dump(a, f) 
-                                f.write("\n")
-
                     else:
-                        await ctx.send(f"{art['name']} is already for sale for {art['base_price']}")
-                        return
+                        await ctx.send(f"{ctx.message.author.name} re-listed {art['name']} for {price} GLD.\nPreviously it was {previous_price}")
+                    
+                    with open(path, "w") as f:
+                        for a in stock:
+                            json.dump(a, f) 
+                            f.write("\n")
+
                 else:
                     await ctx.send(f"You don't own {art['name']}")
                     return
