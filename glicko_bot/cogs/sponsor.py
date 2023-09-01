@@ -101,7 +101,7 @@ class Sponsor(commands.Cog):
         author = ctx.message.author.name
         goblins.query(f"manager == '{author}'", inplace=True)
         goblins["losses"] = goblins["total_games"] - goblins["wins"]
-        goblins["biggest_hit"] = goblins["damage_instances"].map(max)
+        goblins["biggest_hit"] = goblins["damage_instances"].map(lambda x: max(x, default=0))
         goblins = goblins[["tourn_id", 
                            "name", 
                            "funding", 
