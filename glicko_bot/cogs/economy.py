@@ -283,7 +283,6 @@ class Economy(commands.Cog):
         !rate_history
         !rate_history GRC
         """
-        #TODO: add optional window param to control timeseries groupings 
         df = pd.read_json(self.HISTORY_PATH).T
 
         if currency in df.columns:

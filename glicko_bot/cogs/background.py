@@ -18,6 +18,7 @@ utc = datetime.timezone.utc
 # when tournaments kick off
 start_time = [datetime.time(hour=23, tzinfo=utc),
               datetime.time(hour=12, minute=55, tzinfo=utc),
+              datetime.time(hour=16, minute=30, tzinfo=utc),
               datetime.time(hour=19, tzinfo=utc),
             ]
 
@@ -36,6 +37,13 @@ tourn_times = [
                datetime.time(hour=15, tzinfo=utc),
                datetime.time(hour=15, minute=35, tzinfo=utc),
                datetime.time(hour=16, tzinfo=utc),
+
+               datetime.time(hour=17, minute=5, tzinfo=utc),
+               datetime.time(hour=17, minute=25, tzinfo=utc),
+               datetime.time(hour=17, minute=45, tzinfo=utc), # GMT is 1 hour ahead of this
+               datetime.time(hour=18, tzinfo=utc),
+               datetime.time(hour=18, minute=15, tzinfo=utc),
+               datetime.time(hour=18, minute=30, tzinfo=utc),
     
                datetime.time(hour=19, minute=35, tzinfo=utc),
                datetime.time(hour=20, tzinfo=utc),
@@ -49,10 +57,12 @@ tourn_times = [
 backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24) if i%6==0]
 
 # when to add credit to users' wallets
-credit_times = [datetime.time(hour=17, tzinfo=utc)]
+credit_times = [datetime.time(hour=16, minute=5, tzinfo=utc)]
 
 class Background(commands.Cog):
-    
+    """
+    Home of all background tasks.
+    """
     def __init__(self, bot):
         self.bot = bot
         self.channel_name = "general" # channel to send updates to
