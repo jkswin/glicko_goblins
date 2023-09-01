@@ -262,7 +262,7 @@ class Background(commands.Cog):
         log_totals = {currency: np.log10(1 + quantity) for currency, quantity in totals.items()}
         # and use it to adjust them
         new_rates = {key: np.max((new_rates[key] - log_totals.get(key,0), 0.0001))
-                       for key in totals.keys()}
+                       for key in new_rates.keys()}
 
         # update the rates. This includes any rates that didn't exist prior to this loop
         rates.update(new_rates)
@@ -273,7 +273,7 @@ class Background(commands.Cog):
 
         # if they don't, add it as an option to their wallet
         for user in users.keys():
-            for currency in rates:
+            for currency in rates.keys():
                 if currency not in users[user].keys():
                     users[user][currency] = 0
 
