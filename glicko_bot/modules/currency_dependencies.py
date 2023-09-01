@@ -13,7 +13,6 @@ import asyncio
 from dotenv import dotenv_values
 import json
 import numpy as np
-import random
 
 
 ROUTE = "https://euw1.api.riotgames.com"
@@ -41,34 +40,36 @@ RANK_MULTIPLIERS = {
 cfg = dotenv_values(".env")
 summoners = json.loads(cfg["SUMMONERS"])
 
-async def fetch_data(session, url):
-    async with session.get(url, headers={"X-Riot-Token": cfg["RIOT"]}) as response:
+async def fetch_data(session, url, headers):
+    async with session.get(url, headers=headers) as response:
         if response.status == 200:
             return await response.json()
-        return []
+        return {}
+    
 
-async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
+async def rank_to_currency(session, queue_type, summoner):
+    if queue_type not in ["lol", "tft"]:
+        return False
+
+    headers={"X-Riot-Token": cfg["RIOT"]}
     summoner_url = f"/lol/summoner/v4/summoners/by-name/{summoner}"
-    response = await fetch_data(session, ROUTE + summoner_url)
+    response = await fetch_data(session, ROUTE + summoner_url, headers=headers)
     if not response:
         return False
     summoner_id = response.get("id", False)
 
     if queue_type == "tft":
         ranked_url = f"/tft/league/v1/entries/by-summoner/{summoner_id}"
-        response = await fetch_data(session, ROUTE + ranked_url)
+        response = await fetch_data(session, ROUTE + ranked_url, headers=headers)
         ranked_info = response[0]
     elif queue_type == "lol":
         ranked_url = f"/lol/league/v4/entries/by-summoner/{summoner_id}"
-        response = await fetch_data(session, ROUTE + ranked_url)
+        response = await fetch_data(session, ROUTE + ranked_url, headers=headers)
         ranked_info = False
         for r in response:
             if r["queueType"] == "RANKED_SOLO_5x5":
                 ranked_info = r
                 break
-
-    else:
-        raise ValueError("queue_type must be one of ['lol', 'tft']")
     
     if not bool(ranked_info):
         return False
@@ -79,9 +80,9 @@ async def tft_to_currency(session, queue_type, summoner, noise:bool=True):
     wins = ranked_info["wins"]
     losses = ranked_info["losses"]
     
-    return await calculate_currency(tier, rank, lp, wins, losses, noise, session)
+    return await calculate_lol_currency(tier, rank, lp, wins, losses, session, headers)
 
-async def calculate_currency(tier, rank, lp, wins, losses, noise, session):
+async def calculate_lol_currency(tier, rank, lp, wins, losses, session, headers):
 
     high_elo = ["MASTER", "GRANDMASTER", "CHALLENGER"]
     base_value = 1 + RANK_MULTIPLIERS[tier] - rank
@@ -89,7 +90,7 @@ async def calculate_currency(tier, rank, lp, wins, losses, noise, session):
     if tier not in high_elo:
         value = base_value + ((4 * lp) / 100)
     else:
-        response = await fetch_data(url=ROUTE + f"/tft/league/v1/challenger", session=session)
+        response = await fetch_data(url=ROUTE + f"/tft/league/v1/challenger", session=session, headers=headers)
         if not response:
             return False
         lps = [val["leaguePoints"] for val in response["entries"]]
@@ -100,14 +101,11 @@ async def calculate_currency(tier, rank, lp, wins, losses, noise, session):
         
     value *= (wins/losses)**2
 
-    if noise:
-        value *= random.uniform(0.9, 1.1)
-    
     return np.max((0.0001, value))
 
-async def currency_query(summoners, noise=True):
+async def currency_query(summoners):
     async with aiohttp.ClientSession() as session:
-        tasks = [tft_to_currency(session, queue_type, summoner, noise=noise) for currency_str, summoner, queue_type in summoners]
+        tasks = [rank_to_currency(session, queue_type, summoner) for currency_str, summoner, queue_type in summoners]
         results = await asyncio.gather(*tasks)
         return {summoner[0]: result for summoner, result in zip(summoners, results) if result}
             

@@ -7,14 +7,15 @@ import subprocess
 import json
 import warnings
 
+
 data_path = "glicko_bot/data"
 backup_path = "glicko_bot/backup"
 tourn_archive_path = "glicko_bot/data/archive"
 
 data_stores = {"exchange_history.json": {},
-               "exchange.json": {"GLD":1, "SRC":1, "GRC":1},
+               "exchange.json": {"GLD":1},
                 "users.json": {},
-                "kitty.json": {"tax":100}
+                "kitty.json": {"tax":100},
                 }
 
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     if not os.path.exists(".env"):
         with open(".env", "w") as f:
             f.write("DISCORD=YOUR_API_KEY\nRIOT=YOUR_API_KEY\nSUMMONERS=[[`GRC`, `RandomExampleName`, `tft`], ['SRC', `OtherExample`, `lol`]]")
-        warnings.warn("Add the appropriate API keys and Summoners to the newly created .env file.")
+        warnings.warn("Add the appropriate API keys and Summoners to the newly created .env file.\n")
         
     # try create data directory
     if not os.path.exists(data_path):
@@ -69,6 +70,7 @@ if __name__ == "__main__":
         print(f"Succesfully created {first_collection_path}! Time to add art and metadata!")
     else:
         print(f"{ap} already exists!")
+
     
     # try add fundamental data stores to data path
     for filename, content in data_stores.items():

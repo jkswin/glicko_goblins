@@ -37,15 +37,26 @@ class Economy(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        """
+        Give a wallet to new members containing 100 GLD.
+        """
+        # get unique user id
         user_id = str(member.id)
+
+        # read in current list of users' wallets
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
+        
+        # check so that you can't abuse leave + join to generate money
         if user_id not in users:
+            # give them a wallet with all possible currencies at 0
+            # and 100 GLD
             users[user_id] = {"GLD": 100}
             for currency in self.summoners:
                 currency_name = currency[0]
                 users[user_id].update({currency_name:0})
 
+            # save updated wallets
             with open(self.WALLET_PATH, "w") as f:
                 json.dump(users, f)
 
@@ -58,16 +69,21 @@ class Economy(commands.Cog):
         !balance
         """
 
+        # read in wallets
         with open(self.WALLET_PATH, "r") as f:
             users = json.load(f)
+
+        # get the message sender's unique id to match it to their wallet 
         user = str(ctx.author.id)
         if user in users:
+            # send user's wallet contents 
             embed = discord.Embed(title=f"{ctx.author}'s Balance\n(Values rounded to 4DP)", color=0xcc0000) 
             for currency, amount in users[user].items():
                 embed.add_field(name=currency, value=f"{amount:,.4f}", inline=True)
             await ctx.send(embed=embed)
 
         else:
+            # notify if they don't have a wallet
             await ctx.send(f"You don't have a wallet yet! Try {ctx.prefix}create_wallet")
 
     @commands.cooldown(1, 300, BucketType.user)
