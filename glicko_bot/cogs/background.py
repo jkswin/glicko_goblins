@@ -140,7 +140,7 @@ class Background(commands.Cog):
                 position = rankings.index(goblin.tourn_id)
                 # calculate the payout to the user.
                 # based on funding, WL ratio, relative position based on ranking, eagerness to fight and number of tournaments today
-                pre_payout = (goblin.funding * goblin.winloss() * tournament_table.shape[0]/position)/len(start_time)
+                pre_payout = (goblin.funding * goblin.winloss() * (len(self.tournament.fighters)/(position + 1)))/len(start_time)
                 
                 # half of it goes to tax pool; calc and update
                 payout = int(pre_payout * 0.5)
