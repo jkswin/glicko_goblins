@@ -98,8 +98,11 @@ async def calculate_lol_currency(tier, rank, lp, wins, losses, session, headers)
         top_player_lp = np.max(lps)
         difference = lp - average_challenger
         value = base_value + (base_value*difference/(top_player_lp + 1))
-        
-    value *= (wins/losses)**2
+    
+    if losses:
+        value *= (wins/losses)**2
+    else:
+        value *= wins**2
 
     return np.max((0.0001, value))
 
