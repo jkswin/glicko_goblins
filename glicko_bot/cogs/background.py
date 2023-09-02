@@ -10,54 +10,57 @@ from dotenv import dotenv_values
 import pandas as pd
 import os
 import shutil
+import pytz
 
 
 cfg = dotenv_values(".env")
-utc = datetime.timezone.utc
+uktz = pytz.timezone("Europe/London")
 
 # when tournaments kick off
-start_time = [datetime.time(hour=23, tzinfo=utc),
-              datetime.time(hour=12, minute=55, tzinfo=utc),
-              datetime.time(hour=16, minute=30, tzinfo=utc),
-              datetime.time(hour=19, tzinfo=utc),
+start_time = [uktz.localize(datetime.time(hour=23)),
+              uktz.localize(datetime.time(hour=12, minute=55)),
+              uktz.localize(datetime.time(hour=16, minute=30)),
+              uktz.localize(datetime.time(hour=19)),
             ]
 
 # when combats happen. Carefully chosen so tournaments don't overlap!
 tourn_times = [
-               datetime.time(hour=23, minute=35, tzinfo=utc),
-               datetime.time(hour=0, minute=5, tzinfo=utc), # GMT is 1 hour ahead of this
-               datetime.time(hour=0, minute=35,tzinfo=utc),
-               datetime.time(hour=1, minute=5, tzinfo=utc),
-               datetime.time(hour=1, minute=35, tzinfo=utc),
-               datetime.time(hour=2, minute=5, tzinfo=utc),
+               uktz.localize(datetime.time(hour=23, minute=35)),
+               uktz.localize(datetime.time(hour=0, minute=5)), # GMT is 1 hour ahead of this
+               uktz.localize(datetime.time(hour=0, minute=3)),
+               uktz.localize(datetime.time(hour=1, minute=5)),
+               uktz.localize(datetime.time(hour=1, minute=35)),
+               uktz.localize(datetime.time(hour=2, minute=5)),
     
-               datetime.time(hour=13, minute=30, tzinfo=utc),
-               datetime.time(hour=14, tzinfo=utc),
-               datetime.time(hour=14, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
-               datetime.time(hour=15, tzinfo=utc),
-               datetime.time(hour=15, minute=35, tzinfo=utc),
-               datetime.time(hour=16, tzinfo=utc),
+               uktz.localize(datetime.time(hour=13, minute=30)),
+               uktz.localize(datetime.time(hour=14)),
+               uktz.localize(datetime.time(hour=14, minute=30)), # GMT is 1 hour ahead of this
+               uktz.localize(datetime.time(hour=15)),
+               uktz.localize(datetime.time(hour=15, minute=35)),
+               uktz.localize(datetime.time(hour=16)),
 
-               datetime.time(hour=17, minute=5, tzinfo=utc),
-               datetime.time(hour=17, minute=25, tzinfo=utc),
-               datetime.time(hour=17, minute=45, tzinfo=utc), # GMT is 1 hour ahead of this
-               datetime.time(hour=18, tzinfo=utc),
-               datetime.time(hour=18, minute=15, tzinfo=utc),
-               datetime.time(hour=18, minute=30, tzinfo=utc),
+               uktz.localize(datetime.time(hour=17, minute=5)),
+               uktz.localize(datetime.time(hour=17, minute=25)),
+               uktz.localize(datetime.time(hour=17, minute=45)), # GMT is 1 hour ahead of this
+               uktz.localize(datetime.time(hour=18)),
+               uktz.localize(datetime.time(hour=18, minute=15)),
+               uktz.localize(datetime.time(hour=18, minute=30)),
     
-               datetime.time(hour=19, minute=35, tzinfo=utc),
-               datetime.time(hour=20, tzinfo=utc),
-               datetime.time(hour=20, minute=30, tzinfo=utc), # GMT is 1 hour ahead of this
-               datetime.time(hour=21, tzinfo=utc),
-               datetime.time(hour=21, minute=30, tzinfo=utc),
-               datetime.time(hour=22, tzinfo=utc),
+               uktz.localize(datetime.time(hour=19, minute=35)),
+               uktz.localize(datetime.time(hour=20)),
+               uktz.localize(datetime.time(hour=20, minute=30)), # GMT is 1 hour ahead of this
+               uktz.localize(datetime.time(hour=21)),
+               uktz.localize(datetime.time(hour=21, minute=30)),
+               uktz.localize(datetime.time(hour=22)),
                ]
 
+scout_duration = 1800
+
 # when to backup the data directory
-backup_times = [datetime.time(hour=i, tzinfo=utc) for i in range(24) if i%6==0]
+backup_times = [uktz.localize(datetime.time(hour=i)) for i in range(24) if i%6==0]
 
 # when to add credit to users' wallets
-credit_times = [datetime.time(hour=16, minute=5, tzinfo=utc)]
+credit_times = [uktz.localize(datetime.time(hour=16, minute=5))]
 
 class Background(commands.Cog):
     """
@@ -227,15 +230,14 @@ class Background(commands.Cog):
         
         # bot by default does not allow sponsors; allow for sponsors for 30 minutes
         self.bot.accepting_sponsors = True
-        await asyncio.sleep(1800)
+        await asyncio.sleep(scout_duration)
 
         # alert server that they have 30 minutes to sponsor goblins
         # and show times that combats are happening
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"The sponsor window has now closed!\nThere will be **{len(tourn_times)//len(start_time)}** rounds per tournament and {len(start_time)} tournaments today. Each round will be {self.tournament.daily_combats} battles.\nSponsors will earn some GLD after each combat!"
-                message += "\nTournament fights are happening today at:\n" + "\n".join([t.strftime("%H:%M") + " UTC" for t in tourn_times])
+                message = f"**The sponsor window has now closed!**\nThere will be **{len(tourn_times)//len(start_time)}** rounds.\nEach round will be {self.tournament.daily_combats} battles.\nSponsors will earn some GLD after each combat!"
                 await channel.send(message)
 
         # disallow sponsors after the 30 minute sponsor window

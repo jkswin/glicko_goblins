@@ -14,6 +14,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 import numpy as np
+import pytz
+from datetime import datetime
+
+from background import tourn_times, start_time, scout_duration
 
 from glicko_goblins.combat import Tournament
 from glicko_goblins.goblins import Fighter
@@ -32,6 +36,26 @@ class Sponsor(commands.Cog):
         self.bot = bot
         self.tournament_path = "glicko_goblins/data/tournament.pkl"
         self.user_path = "glicko_bot/data/users.json"
+
+    @commands.command()
+    async def times(self, ctx):
+        """
+        Display the times of tournaments and tournament rounds.
+
+        Example usage:
+        !times
+        """
+        n_tourns = len(start_time)
+        total_rounds = len(tourn_times)
+
+        embed = discord.Embed(title="Today's Tournament Schedule", description=f"Scout duration: {scout_duration/60}hrs", color=0xf803fc)
+        for tourn_number, timewindow in enumerate(range(0, total_rounds, n_tourns)):
+            window = tourn_times[timewindow:timewindow + n_tourns]
+            name = f"Tournament {tourn_number + 1}\nStart Time: {start_time[tourn_number].strftime('%H:%M')}" # TODO: Add random tournament name gen
+            value = "\n".join([f"Round {i} > {round.strftime('%H:%M')}" for i, round in enumerate(window, start=1)])
+            embed.add_field(name=name, value=value)
+        
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def scout(self, ctx, my_fighters: str = commands.parameter(description="Add 'me' if you only want to display fighters you manage!", default=None)):
