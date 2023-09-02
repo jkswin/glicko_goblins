@@ -86,6 +86,10 @@ class Shop(commands.Cog):
             users = json.load(f)
 
         user = str(ctx.author.id)
+
+        if user not in users.keys():
+            await ctx.send("How can you buy stuff without a wallet?!")
+            return
         
         for art in stock:
             if art.get("uid", False) == uid:
