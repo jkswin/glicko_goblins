@@ -39,12 +39,14 @@ class Sponsor(commands.Cog):
         Example usage:
         !times
         """
+        
+        embed = discord.Embed(title="Today's Tournament Schedule", description=f"Scout duration: {scout_duration/60}hrs", color=0xf803fc)
         n_tourns = len(start_time)
         total_rounds = len(tourn_times)
+        rounds_per_tourn = total_rounds//n_tourns
 
-        embed = discord.Embed(title="Today's Tournament Schedule", description=f"Scout duration: {scout_duration/60}hrs", color=0xf803fc)
-        for tourn_number, timewindow in enumerate(range(0, total_rounds, n_tourns)):
-            window = tourn_times[timewindow:timewindow + n_tourns]
+        for tourn_number, timewindow in enumerate(range(0, total_rounds, rounds_per_tourn)):
+            window = tourn_times[timewindow:timewindow + rounds_per_tourn]
             name = f"Tournament {tourn_number + 1}\nStart Time: {start_time[tourn_number].strftime('%H:%M')}"
             value = "\n".join([f"Round {i} > {round.strftime('%H:%M')}" for i, round in enumerate(window, start=1)])
             embed.add_field(name=name, value=value)
