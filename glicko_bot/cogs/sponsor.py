@@ -12,7 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 
-from background import tourn_times, start_time, scout_duration
+from .background import tourn_times, start_time, scout_duration
 
 from glicko_goblins.combat import Tournament
 
