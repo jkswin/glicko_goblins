@@ -83,7 +83,7 @@ class Background(commands.Cog):
             kitty = json.load(f)
 
         # convert the current tournament state to a dataframe for easy sorting
-        tournament_table = pd.DataFrame(self.tournament.fighter_info()).sort_values("mean_outcome")
+        tournament_table = pd.DataFrame(self.tournament.fighter_info()).sort_values("mean_outcome", ascending=False)
         # sort the tournament participants by ranking. (ranking by glicko isn't strictly sound, but does the job here)
         rankings = tournament_table["tourn_id"].tolist()
 
