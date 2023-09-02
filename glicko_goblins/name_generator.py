@@ -1,8 +1,9 @@
 import numpy as np
-from random import shuffle
+from random import shuffle, choice
 
 
 from .configs import *
+
 def generate_names():
     combinations = []
     
@@ -14,3 +15,10 @@ def generate_names():
     
     shuffle(combinations)
     return combinations
+
+def generate_tournament_name() -> str:
+    return f"The {choice(TOURN_TITLES)} {choice(TOURN_TYPES)}"
+
+
+
+

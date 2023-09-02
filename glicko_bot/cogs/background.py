@@ -16,6 +16,11 @@ import pytz
 cfg = dotenv_values(".env")
 uktz = pytz.timezone("Europe/London")
 
+### init time variables ###
+
+#how often to update exchange rates
+exchange_update_interval = 5 #minutes
+
 # when tournaments kick off
 start_time = [uktz.localize(datetime.time(hour=23)),
               uktz.localize(datetime.time(hour=12, minute=55)),
@@ -54,6 +59,7 @@ tourn_times = [
                uktz.localize(datetime.time(hour=22)),
                ]
 
+# how long the scouting window after tournament start is
 scout_duration = 1800
 
 # when to backup the data directory
@@ -225,7 +231,7 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"@everyone **A new tournament has started!**\n\nYou have **30 minutes** to choose any sponsorships!\nCall *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!\nThe current results are based on pre-tournament matches. Choose wisely!"
+                message = f"@everyone **{self.tournament.tournament_name} has started!**\n\nYou have **30 minutes** to choose any sponsorships!\nCall *!scout* to see the contestants, *!fund* to invest your gold and *!goblin goblin_id* to view a goblin's stats!\nThe current results are based on pre-tournament matches. Choose wisely!"
                 await channel.send(message)
         
         # bot by default does not allow sponsors; allow for sponsors for 30 minutes
@@ -243,7 +249,7 @@ class Background(commands.Cog):
         # disallow sponsors after the 30 minute sponsor window
         self.bot.accepting_sponsors = False
         
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=exchange_update_interval)
     async def update_exchange_rate(self):
         """
         Logic for updating exchange rates, adjusting user wallets to handle new currencies 

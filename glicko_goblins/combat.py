@@ -5,7 +5,7 @@ import json
 import pickle 
 
 from .goblins import Fighter
-from .name_generator import generate_names
+from .name_generator import generate_names, generate_tournament_name
 from . import glicko
 
 class Tournament:
@@ -13,6 +13,7 @@ class Tournament:
     def __init__(self, participants=1000, n_days=100, daily_combats=1000, daily_mortalities=5, fighters: list = None) -> None:
         
         self.possible_names = generate_names()
+        self.tournament_name = generate_tournament_name()
         if fighters is None:
             self.participants = participants
             self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0, tourn_id=i) for i in range(participants)]
