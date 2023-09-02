@@ -18,7 +18,7 @@ start_time = [datetime.time(hour=23, tzinfo=tz),
 tourn_times = [
                datetime.time(hour=23, minute=35, tzinfo=tz),
                datetime.time(hour=0, minute=5, tzinfo=tz), # GMT is 1 hour ahead of this
-               datetime.time(hour=0, minute=3, tzinfo=tz),
+               datetime.time(hour=0, minute=30, tzinfo=tz),
                datetime.time(hour=1, minute=5, tzinfo=tz),
                datetime.time(hour=1, minute=35, tzinfo=tz),
                datetime.time(hour=2, minute=5, tzinfo=tz),
