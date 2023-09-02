@@ -160,6 +160,8 @@ class Sponsor(commands.Cog):
             return
         
         tourn = Tournament.from_save(self.tournament_path)
+        with open(self.user_path, "r") as f:
+                        users = json.load(f)
         
         managers = [fighter["manager"] for fighter in tourn.fighter_info()]
         if managers.count(ctx.message.author.name) >= 3:
@@ -170,8 +172,6 @@ class Sponsor(commands.Cog):
             if goblin.tourn_id == tourn_id:
                 if goblin.manager == None:
                     current_funds = goblin.funding
-                    with open(self.user_path, "r") as f:
-                        users = json.load(f)
                     user_funds = users[str(ctx.message.author.id)]["GLD"]
 
                     if user_funds < current_funds:
