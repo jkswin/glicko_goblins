@@ -40,7 +40,7 @@ class Sponsor(commands.Cog):
         !times
         """
         
-        embed = discord.Embed(title="Today's Tournament Schedule", description=f"Scout duration: {scout_duration/60}hrs", color=0xf803fc)
+        embed = discord.Embed(title="Today's Tournament Schedule", description=f"Scout duration: {scout_duration//60} Minutes", color=0xf803fc)
         n_tourns = len(start_time)
         total_rounds = len(tourn_times)
         rounds_per_tourn = total_rounds//n_tourns
