@@ -116,8 +116,8 @@ class Sponsor(commands.Cog):
         if not os.path.exists(self.tournament_path):
             await ctx.send("There isn't an ongoing tournament right now!")
             return
-            
-        goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
+        current_tourn = Tournament.from_save(self.tournament_path)
+        goblins = pd.DataFrame(current_tourn.fighter_info())
         author = ctx.message.author.name
         goblins.query(f"manager == '{author}'", inplace=True)
         goblins["losses"] = goblins["total_games"] - goblins["wins"]
@@ -141,7 +141,7 @@ class Sponsor(commands.Cog):
                             "attacks_dodged",
                             "biggest_hit",
                             ]]
-        await ctx.send(f"**{author}'s current roster:**")
+        await ctx.send(f"**{author}**'s current roster for {current_tourn.tournament_name}:")
         for row_dict in goblins.to_dict(orient="records"):
             embed = discord.Embed(title=f"{row_dict['name']}")
             for k,v in row_dict.items():
