@@ -16,7 +16,7 @@ class Tournament:
         self.tournament_name = generate_tournament_name()
         if fighters is None:
             self.participants = participants
-            self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0, tourn_id=i) for i in range(participants)]
+            self.fighters = [Fighter(name=self.possible_names.pop(0), entry_day=0, tourn_id=i, tournament_name=self.tournament_name) for i in range(participants)]
         else:
             self.fighters = fighters
             self.participants = len(fighters)

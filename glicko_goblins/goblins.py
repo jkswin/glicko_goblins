@@ -9,11 +9,12 @@ from .glicko import game_outcome, MAX_RD, MIN_RD
 
 class Fighter:
 
-    def __init__(self, name=None, entry_day=None, tourn_id=None) -> None:
+    def __init__(self, name=None, entry_day=None, tourn_id=None, tournament_name=None) -> None:
         
         self.name = name
         self.tourn_id = tourn_id
         self.earnings = 0
+        self.tournament_name = tournament_name
 
         # rating metrics
         self.rating: float = 1500.0
@@ -25,6 +26,7 @@ class Fighter:
         # __future__
         self.team: str = None
         self.manager: str = None
+        self.pep: float = 1
         
         # static stats
         self.max_hp: int = self._truncnorm(*STAT_DISTRIBUTIONS["hp"])
