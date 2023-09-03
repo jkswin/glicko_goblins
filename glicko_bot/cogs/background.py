@@ -158,7 +158,7 @@ class Background(commands.Cog):
 
         # initialise a tournament
         self.tournament = Tournament(participants=70,
-                                        daily_combats=50,
+                                        daily_combats=100,
                                         daily_mortalities=0,
                                         )
         
