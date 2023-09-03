@@ -23,6 +23,7 @@ class Shop(commands.Cog):
         self.bot = bot
         self.SHOP_PATH = "glicko_bot/data/art/"
         self.WALLET_PATH = "glicko_bot/data/users.json"
+        self.KITTY_PATH = "glicko_bot/data/kitty.json"
 
     @commands.command()
     async def stock(self, ctx):
@@ -142,6 +143,13 @@ class Shop(commands.Cog):
         with open(path, "r") as f:
             stock = [json.loads(a) for a in f.readlines()]
 
+        with open(self.KITTY_PATH, "r") as f:
+            tax_pool = json.load(f)["tax"]
+
+        if price >= tax_pool:
+            await ctx.send(f"I think that's a bit unreasonable... Try something less than {tax_pool:,.4f}")
+            return 
+        
         for art in stock:
             if art.get("uid", False) == uid:
                 owner = art.get("owner", "")
@@ -152,9 +160,9 @@ class Shop(commands.Cog):
                     art["for_sale"] = 1
 
                     if not bool(for_sale):
-                        await ctx.send(f"{ctx.message.author.name} listed {art['name']} for {price} GLD.\n Buy it while you can!")
+                        await ctx.send(f"{ctx.message.author.name} listed {art['name']} for {price:,} GLD.\n Buy it while you can!")
                     else:
-                        await ctx.send(f"{ctx.message.author.name} re-listed {art['name']} for {price} GLD.\nPreviously it was {previous_price}")
+                        await ctx.send(f"{ctx.message.author.name} re-listed {art['name']} for {price:,} GLD.\nPreviously it was {previous_price:,}")
                     
                     with open(path, "w") as f:
                         for a in stock:

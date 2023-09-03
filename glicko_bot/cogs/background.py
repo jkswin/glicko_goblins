@@ -54,6 +54,8 @@ class Background(commands.Cog):
         """
         Run a tournament day that has been initialised. 
         """
+        def logistic_mapping(x, N, k=0.2):
+            return (N/10)  * (1 + 1 / (1 + np.exp(-k *(x - N/2)))) - N/10
 
         # if there isn't an active tournament saved, return
         try:
@@ -98,7 +100,9 @@ class Background(commands.Cog):
                 position = rankings.index(goblin.tourn_id)
                 # calculate the payout to the user.
                 # based on funding, WL ratio, relative position based on ranking, eagerness to fight and number of tournaments today
-                pre_payout = (goblin.funding * goblin.winloss() * (len(self.tournament.fighters)/(position + 1)))/len(start_time)
+                n_fighters = len(self.tournament.fighters)
+                ranking_factor = logistic_mapping(x=n_fighters - position, N=n_fighters, k=0.2)
+                pre_payout = (goblin.funding * goblin.winloss() * ranking_factor)/len(start_time)
                 
                 # half of it goes to tax pool; calc and update
                 payout = int(pre_payout * 0.5)
