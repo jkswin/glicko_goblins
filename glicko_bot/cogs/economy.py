@@ -299,6 +299,7 @@ class Economy(commands.Cog):
         buf.seek(0)
 
         await ctx.send("Here's how the money's been moving recently.", file=discord.File(buf, "graph.png"))
+        plt.close()
 
     @commands.command(aliases=["wealthy"])
     async def richest(self, ctx):

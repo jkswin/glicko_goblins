@@ -103,6 +103,7 @@ class Sponsor(commands.Cog):
                 plt.savefig(buf)
                 buf.seek(0)
                 await ctx.send("Fighter breakdown:", file=discord.File(buf, "goblin.png"))
+                plt.close()
                 break
 
     @commands.command()
