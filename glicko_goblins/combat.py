@@ -7,6 +7,7 @@ import pickle
 from .goblins import Fighter
 from .name_generator import generate_names, generate_tournament_name
 from . import glicko
+from .configs import *
 
 class Tournament:
 
@@ -64,6 +65,7 @@ class Tournament:
                                                         fighter.rating_deviation, 
                                                         fighter.games)
             fighter.guts = fighter._generate_guts(fighter.rating_deviation, fighter.eagerness)
+            fighter.avarice = fighter._generate_avarice(fighter.funding, STAT_DISTRIBUTIONS["funding"][3], fighter.eagerness)
             fighter.archived_games.extend(fighter.games)
             fighter.games = []
 
