@@ -8,7 +8,7 @@ tz = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
 exchange_update_interval = 5 #minutes
 
 # when tournaments kick off
-start_time = [datetime.time(hour=23, tzinfo=tz),
+start_time = [datetime.time(hour=23, minute=5, tzinfo=tz),
               datetime.time(hour=12, minute=55, tzinfo=tz),
               datetime.time(hour=16, minute=30, tzinfo=tz),
               datetime.time(hour=19, tzinfo=tz),
@@ -16,7 +16,7 @@ start_time = [datetime.time(hour=23, tzinfo=tz),
 
 # when combats happen. Carefully chosen so tournaments don't overlap!
 tourn_times = [
-               datetime.time(hour=23, minute=35, tzinfo=tz),
+               datetime.time(hour=23, minute=40, tzinfo=tz),
                datetime.time(hour=0, minute=5, tzinfo=tz), # GMT is 1 hour ahead of this
                datetime.time(hour=0, minute=30, tzinfo=tz),
                datetime.time(hour=1, minute=5, tzinfo=tz),
