@@ -171,6 +171,8 @@ class Sponsor(commands.Cog):
             await ctx.send("You can't sponsor more than 3 goblins per tournament!")
             return
         
+        funding_cap = max([goblin.funding+1 for goblin in tourn.fighters])
+        
         for goblin in tourn.fighters:
             if goblin.tourn_id == tourn_id:
                 if goblin.manager == None:
@@ -187,6 +189,10 @@ class Sponsor(commands.Cog):
                     
                     if new_funds <= current_funds:
                         await ctx.send(f"{new_funds} isn't enough! {goblin.name} is already getting {current_funds}!\nPlease invest more...")
+                        return
+                    
+                    if new_funds > funding_cap:
+                        await ctx.send(f"The current funding cap for this tournament is {funding_cap}. Make sure your funding is less than or equal to this amount!")
                         return
                     
                     users[str(ctx.message.author.id)]["GLD"] -= new_funds
