@@ -86,11 +86,13 @@ class Tournament:
                 wins += 1
             else:
                 losses += 1
+
         if losses == 0:
             if wins == 0:
                 return 1
             else:
-                return 0
+                return wins
+            
         return wins/losses
         
             

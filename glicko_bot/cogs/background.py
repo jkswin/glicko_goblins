@@ -118,17 +118,21 @@ class Background(commands.Cog):
                     perc_return = 100*payout/goblin.funding
                     total_perc_return = 100 * goblin.earnings/goblin.funding
                     # add each users' returns to the output string
-                    output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position} with a WinLoss of {goblin.recent_winloss} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n"
+                    for guild in self.bot.guilds:
+                        channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+                        if channel:
+                            await channel.send(f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position} with a WinLoss of {goblin.recent_winloss} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n")
                 
                 else:
                     # if a manager no longer has a wallet, put their earnings into the tax pot
                     # add this to message
-                    output += f"@{goblin.manager} doesn't have a wallet and so {goblin.name}'s earnings were transferred to the state.\n\n"
+                    for guild in self.bot.guilds:
+                        channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+                        if channel:
+                            await channel.send(f"@{goblin.manager} doesn't have a wallet and so {goblin.name}'s earnings were transferred to the state.\n\n")
+                    
                     kitty["tax"] += payout
                     total_round_tax += payout
-
-        # alert of amount added to tax pot
-        output += f"\n{total_round_tax:,.2f} GLD was paid to the state in Tournament fairs."
 
         # save the updated tournament (goblin earnings were added to each goblin)
         self.tournament.save(self.tournament_path)
@@ -145,7 +149,7 @@ class Background(commands.Cog):
             for guild in self.bot.guilds:
                 channel = discord.utils.get(guild.text_channels, name=self.channel_name)
                 if channel:
-                    await channel.send(output)
+                    await channel.send(f"\n{total_round_tax:,.2f} GLD was paid to the state in Tournament fairs.")
                 
     @tasks.loop(time=start_time)
     async def init_tournament(self):
