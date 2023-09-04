@@ -66,16 +66,33 @@ class Tournament:
                                                         fighter.games)
             fighter.guts = fighter._generate_guts(fighter.rating_deviation, fighter.eagerness)
             fighter.avarice = fighter._generate_avarice(fighter.funding, STAT_DISTRIBUTIONS["funding"][3], fighter.eagerness)
+            fighter.recent_winloss = self.recent_winloss(fighter)
             fighter.archived_games.extend(fighter.games)
             fighter.games = []
 
-        # update their expectation
+        # update their mean expected outcome against all the other fighters
         self.get_expectations()
     
     def run(self):
         for t in tqdm(range(self.n_days)):
             self.run_day(t=t)
 
+    def recent_winloss(self, fighter) -> float:
+        wins = 0
+        losses = 0
+        for g in fighter.games:
+            win = g["win"]
+            if win:
+                wins += 1
+            else:
+                losses += 1
+        if losses == 0:
+            if wins == 0:
+                return 1
+            else:
+                return 0
+        return wins/losses
+        
             
     @classmethod
     def from_save(cls, path:str):

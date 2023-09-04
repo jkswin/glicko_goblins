@@ -55,6 +55,7 @@ class Fighter:
         self.games: list = []
         self.wins: int = 0
         self.total_games: int = 0
+        self.recent_winloss: float = 1
         self.entry_day: int = entry_day
         self.time_since_last_combat: int = 0 #days
         self.swings: int = 0
