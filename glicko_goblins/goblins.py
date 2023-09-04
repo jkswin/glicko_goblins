@@ -287,6 +287,7 @@ class Fighter:
         ax[0].set_xticks([])
         ytick_labels = [key.title() for key in proportions.keys()]
         ax[0].set_yticks(list(proportions.keys()), ytick_labels)
+        ax[0].set_xlim(left=0, right=1)
 
         # now for the polygon
         ax[1].remove()
@@ -307,9 +308,12 @@ class Fighter:
         ax_polar.set_xticks(angles)
         ax_polar.set_xticklabels([k.replace("_prob", "").title() for k in bp.keys()])
         ax_polar.set_yticklabels([])
+        ax_polar.set_xlim(left=0, right=2*np.pi)
         ax_polar.spines['polar'].set_visible(False)
 
-        plt.suptitle(self.name)
+        title = f"{self.name} ({self.tourn_id})"
+        plt.subplots_adjust(top=0.75)
+        plt.suptitle(title)  
 
         return fig
 
@@ -361,4 +365,4 @@ class Fighter:
 
 if __name__ == "__main__":
     g = Fighter()
-    print(g._floors_and_ceilings())
+    print(g.plot_base_stats())
