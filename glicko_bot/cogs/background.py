@@ -116,10 +116,7 @@ class Background(commands.Cog):
                 if manager_id in users.keys():
                     users[manager_id]["GLD"] += payout
                     goblin.earnings += payout
-                    if payout > 0:
-                        perc_return = 100*payout/goblin.funding
-                    else:
-                        perc_return = 0
+                    perc_return = 100*payout/goblin.funding
                     # add each users' returns to the output string
                     output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThat's {perc_return}% of their funding.\n"
                 
