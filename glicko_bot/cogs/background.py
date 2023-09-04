@@ -102,7 +102,7 @@ class Background(commands.Cog):
                 position = rankings.index(goblin.tourn_id)
                 n_fighters = len(self.tournament.fighters)
                 ranking_factor = logistic_mapping(x=n_fighters - position, N=n_fighters, k=0.2)
-                pre_payout = (goblin.funding * np.sqrt(goblin.winloss()) * ranking_factor)/len(start_time)
+                pre_payout = (goblin.funding * np.cbrt(goblin.winloss()) * ranking_factor)/len(start_time)
                 
                 # half of it goes to tax pool; calc and update
                 payout = int(pre_payout * 0.5)
