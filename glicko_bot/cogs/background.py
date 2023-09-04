@@ -121,7 +121,7 @@ class Background(commands.Cog):
                     for guild in self.bot.guilds:
                         channel = discord.utils.get(guild.text_channels, name=self.channel_name)
                         if channel:
-                            await channel.send(f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position} with a WinLoss of {goblin.recent_winloss} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n")
+                            await channel.send(f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position+1} with a WinLoss of {goblin.recent_winloss:,.2f} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n\n")
                 
                 else:
                     # if a manager no longer has a wallet, put their earnings into the tax pot
