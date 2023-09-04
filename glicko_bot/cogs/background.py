@@ -95,31 +95,30 @@ class Background(commands.Cog):
 
         # loop through all the fighters
         for goblin in self.tournament.fighters:
-            # if they have a sponsor
-            if goblin.manager != None:
-                # calculate the payout to the user.
-                # based on funding, WL ratio, relative position based on ranking, eagerness to fight and number of tournaments today
-                position = rankings.index(goblin.tourn_id)
-                n_fighters = len(self.tournament.fighters)
+            # calculate the payout
+            # based on funding, WL ratio, relative position based on ranking, eagerness to fight and number of tournaments today
+            position = rankings.index(goblin.tourn_id)
+            n_fighters = len(self.tournament.fighters)
 
-                ranking_factor = logistic_mapping(x=n_fighters - position, N=n_fighters, k=0.2)
-                pre_payout = (goblin.funding * np.cbrt(goblin.recent_winloss) * ranking_factor)/len(start_time)
-                
-                # half of it goes to tax pool; calc and update
-                payout = int(pre_payout * 0.5)
+            ranking_factor = logistic_mapping(x=n_fighters - position, N=n_fighters, k=0.2)
+            pre_payout = (goblin.funding * np.cbrt(goblin.recent_winloss) * ranking_factor)/len(start_time)
+            
+            # half of it goes to tax pool if goblin is managed; calc and update
+            payout = int(pre_payout * 0.5)
+            goblin.earnings += payout
+            
+            if goblin.manager != None:
                 tax = pre_payout - payout
                 kitty["tax"] += tax
                 total_round_tax += tax
-
                 # add the amount earned by their sponsored golbins to the users wallets
                 manager_id = str(discord.utils.get(self.bot.users, name=goblin.manager).id)
                 if manager_id in users.keys():
                     users[manager_id]["GLD"] += payout
-                    goblin.earnings += payout
                     perc_return = 100*payout/goblin.funding
                     total_perc_return = 100 * goblin.earnings/goblin.funding
                     # add each users' returns to the output string
-                    output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThat's {perc_return}% of their funding and a cumulative total of {total_perc_return}% for this tournament so far.\n"
+                    output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThat's {int(perc_return)}% of their funding and a cumulative total of {int(total_perc_return)}% for this tournament so far.\n"
                 
                 else:
                     # if a manager no longer has a wallet, put their earnings into the tax pot
