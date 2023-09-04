@@ -118,7 +118,7 @@ class Background(commands.Cog):
                     perc_return = 100*payout/goblin.funding
                     total_perc_return = 100 * goblin.earnings/goblin.funding
                     # add each users' returns to the output string
-                    output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThat's {int(perc_return)}% of their funding and a cumulative total of {int(total_perc_return)}% for this tournament so far.\n"
+                    output += f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position} with a WinLoss of {goblin.recent_winloss} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n"
                 
                 else:
                     # if a manager no longer has a wallet, put their earnings into the tax pot
