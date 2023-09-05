@@ -68,7 +68,7 @@ class Sponsor(commands.Cog):
             
             goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
             goblins["losses"] = goblins["total_games"] - goblins["wins"]
-            goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings", "wins", "losses", "rating", "rating_deviation"]]
+            goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings", "rating", "rating_deviation"]]
 
             if my_fighters == "me":
                  author = ctx.message.author.name
@@ -127,8 +127,6 @@ class Sponsor(commands.Cog):
                            "name", 
                            "funding", 
                            "earnings", 
-                           "wins", 
-                           "losses", 
                            "rating", 
                            "rating_deviation",
                             "total_games",

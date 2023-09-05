@@ -46,11 +46,10 @@ class Tournament:
         # sort to avoid indexing issues when calling pop
         deaths = sorted(deaths, reverse=True)
         for d in deaths:
-            self.fighters[d].alive = False
-            self.deceased.append(self.fighters.pop(d))
-
+            self.deceased.append(self.fighters[d])
+            self.fighters[d] = Fighter(name=self.possible_names.pop(0), entry_day=0, tourn_id=self.fighters[d].tourn_id, tournament_name=self.tournament_name)
+            
         # add that many new fighters into the mix. #TODO Account for tourn_id
-        [self.fighters.append(Fighter(name=self.possible_names.pop(0),entry_day=t+1)) for _ in range(self.turnover)]
         assert len(self.fighters) == self.participants
 
         # update each fighter's glicko score after each day
@@ -87,13 +86,12 @@ class Tournament:
             else:
                 losses += 1
 
-        if losses == 0:
-            if wins == 0:
-                return 1
-            else:
-                return wins
-            
-        return wins/losses
+        if losses == 0 and wins == 0:
+            return 0
+        elif losses == 0:
+            return wins
+        else:
+            return wins/losses
         
             
     @classmethod

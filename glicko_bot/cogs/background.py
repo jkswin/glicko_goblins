@@ -167,8 +167,8 @@ class Background(commands.Cog):
 
         # initialise a tournament
         self.tournament = Tournament(participants=70,
-                                        daily_combats=100,
-                                        daily_mortalities=0,
+                                        daily_combats=50,
+                                        daily_mortalities=10,
                                         )
         
         # load in the tax pool and increase the amount of base funding goblins have 
@@ -180,6 +180,8 @@ class Background(commands.Cog):
 
         # run one tournament day to generate preliminary ratings
         self.tournament.run_day()
+        self.tournament.run_day()
+        self.tournament.turnover = 0
         # triple the number of combats to make rounds more interesting than preliminary round
         self.tournament.daily_combats *= 3
         # save the new tournament state
