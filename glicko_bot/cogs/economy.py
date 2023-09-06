@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import io
 from dotenv import dotenv_values
 import numpy as np
+import datetime
 
 sns.set_theme()
 cfg = dotenv_values(".env")
@@ -274,7 +275,7 @@ class Economy(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["rh", "history"])
-    async def rate_history(self, ctx, currency: str = commands.parameter(description="Display only a specified currency", default="")):
+    async def rate_history(self, ctx, currency: str = commands.parameter(description="Display only a specified currency", default=""), n_days: int = commands.parameter(description="The number of days to display.", default=7)):
         """
         Display a graph of currency values over time.
         Specify a currency to only see a graph of that currency.
@@ -282,11 +283,28 @@ class Economy(commands.Cog):
         Example usage:
         !rate_history
         !rate_history GRC
+        !rate_history GRC 1
         """
+
+        if n_days > 7:
+            await ctx.send("I can only show you the within the last 7 days!")
+            return
+        elif n_days < 1:
+            await ctx.send("That makes no sense...")
+            return
+        
+
+
         df = pd.read_json(self.HISTORY_PATH).T
+        today = datetime.datetime.today()
+        ago = today - datetime.timedelta(days=n_days)
+        df = df.loc[df.index < ago]
 
         if currency in df.columns:
             df = df[[currency]]
+        else:
+            await ctx.send("That currency doesn't exist!")
+            return
             
         plt.figure(figsize=(15, 8))
         sns.lineplot(df)
