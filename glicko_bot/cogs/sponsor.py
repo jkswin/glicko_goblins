@@ -216,9 +216,9 @@ class Sponsor(commands.Cog):
         
         goblin = goblins.loc[goblins.tourn_id == tourn_id]
 
-        if goblin.manager == None:
+        if goblin["manager"] == None:
 
-            tip_price = max((10, goblin.funding//20))
+            tip_price = max((10, goblin["funding"]//20))
 
             with open(self.user_path, "r") as f:
                 users = json.load(f)
@@ -233,7 +233,7 @@ class Sponsor(commands.Cog):
             await ctx.send(response)
 
         else:
-            await ctx.send(f"They're managed by {goblin.manager}! I can't give away secrets about other people's goblins...")
+            await ctx.send(f"They're managed by {goblin['manager']}! I can't give away secrets about other people's goblins...")
 
         
 
