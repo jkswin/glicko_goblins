@@ -205,8 +205,8 @@ class Sponsor(commands.Cog):
         model = LOGISTIC_REGRESSION
 
         if not os.path.exists(self.tournament_path):
-                await ctx.send("There isn't an ongoing tournament right now!")
-                return
+            await ctx.send("There isn't an ongoing tournament right now!")
+            return
             
         goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
 
@@ -218,13 +218,14 @@ class Sponsor(commands.Cog):
 
         if len(goblin.manager) == 0:
 
-            tip_price = min((10, goblin.funding//20))
+            tip_price = max((10, goblin.funding//20))
 
             with open(self.user_path, "r") as f:
                 users = json.load(f)
 
-            if users[ctx.author.id].get("GLD", 0) < tip_price:
+            if users[ctx.message.author.id].get("GLD", 0) < tip_price:
                 await ctx.send(f"Pahaha you think I'm giving away that information for any less than {tip_price} GLD?")
+                return
             
             features = goblin[LR_FEATURES].to_numpy().reshape(1,-1)
             prediction = model.predict(features)[0]
