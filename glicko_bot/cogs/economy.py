@@ -298,7 +298,7 @@ class Economy(commands.Cog):
         df = pd.read_json(self.HISTORY_PATH).T
         today = datetime.datetime.today()
         ago = today - datetime.timedelta(days=n_days)
-        df = df.loc[df.index < ago]
+        df = df.loc[df.index > ago]
 
         if currency in df.columns:
             df = df[[currency]]
