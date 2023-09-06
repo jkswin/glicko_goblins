@@ -92,7 +92,8 @@ class Background(commands.Cog):
         # prepare the output string and a var for tracking the tax
         output = "\n"
         total_round_tax = 0
-
+        
+        manager_results = {}
         # loop through all the fighters
         for goblin in self.tournament.fighters:
             # calculate the payout
@@ -118,10 +119,20 @@ class Background(commands.Cog):
                     perc_return = 100*payout/goblin.funding
                     total_perc_return = 100 * goblin.earnings/goblin.funding
                     # add each users' returns to the output string
-                    for guild in self.bot.guilds:
-                        channel = discord.utils.get(guild.text_channels, name=self.channel_name)
-                        if channel:
-                            await channel.send(f"\n@{goblin.manager} earned **{payout:,.2f} GLD** from **{goblin.name}**'s performance!\nThey are currently rank {position+1} with a WinLoss of {goblin.recent_winloss:,.2f} this round\nThis round's yield is {int(perc_return)}% of their funding for a cumulative total of {int(total_perc_return)}% so far this tournament.\n\n")
+                    info_dict = {
+                            "name": goblin.name,
+                            "payout": payout,
+                            "rank": position + 1,
+                            "recent_winloss": goblin.recent_winloss,
+                            "percent_return": int(perc_return), 
+                            "total_percent_return": int(total_perc_return),
+                        }
+                    if goblin.manager not in manager_results.keys():
+                        manager_results[goblin.manager] = []
+                        
+                    manager_results[goblin.manager].append(info_dict)
+                    
+                
                 
                 else:
                     # if a manager no longer has a wallet, put their earnings into the tax pot
@@ -133,6 +144,17 @@ class Background(commands.Cog):
                     
                     kitty["tax"] += payout
                     total_round_tax += payout
+
+        for manager, goblins in manager_results.items():
+            embed = discord.Embed(title=f"{manager}'s Roster")
+            for goblin in goblins:
+                embed_value = f"Round Payout:{goblin['payout']}\nCurrent Rank: {goblin['rank']}\nRound WL: {goblin['recent_winloss']}\n%Return:{goblin['percent_return']}\n%Total:{goblin['total_percent_return']}"
+                embed.add_field(name=goblin["name"], value=embed_value)
+
+            for guild in self.bot.guilds:
+                channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+                if channel:
+                    await channel.send(embed=embed)
 
         # save the updated tournament (goblin earnings were added to each goblin)
         self.tournament.save(self.tournament_path)

@@ -11,8 +11,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
+import random
 
 from ..modules.time import tourn_times, start_time, scout_duration
+from ..modules.models import *
 
 from glicko_goblins.combat import Tournament
 
@@ -68,7 +70,7 @@ class Sponsor(commands.Cog):
             
             goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
             goblins["losses"] = goblins["total_games"] - goblins["wins"]
-            goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings", "rating", "rating_deviation"]]
+            goblins = goblins[["tourn_id", "name", "manager", "funding", "earnings"]]
 
             if my_fighters == "me":
                  author = ctx.message.author.name
@@ -84,7 +86,7 @@ class Sponsor(commands.Cog):
                 await ctx.send(f"```\n{goblins[start_idx:end_idx].to_markdown(index=False)}\n```")
             
     @commands.command(aliases=["stats"])
-    async def goblin(self, ctx,  tourn_id: float = commands.parameter(description="The tourn_id of a goblin.")):
+    async def goblin(self, ctx,  tourn_id: int = commands.parameter(description="The tourn_id of a goblin.")):
         """
         Display the stats of a goblin in a tournament.
 
@@ -149,12 +151,12 @@ class Sponsor(commands.Cog):
             await ctx.send(embed=embed)
         
     @commands.command(aliases=["fund", "invest"])
-    async def sponsor(self, ctx, tourn_id: float = commands.parameter(description="The tourn_id of a goblin.")):
+    async def sponsor(self, ctx, tourn_id: int = commands.parameter(description="The tourn_id of a goblin.")):
         """
         Invest gold into Goblin Tournaments. Use !scout to see the options.
 
         Example usage:
-        !sponsor 31 100
+        !sponsor 31
         """
         if not self.bot.accepting_sponsors:
             await ctx.send("Sponsorship for the current tournament is now closed!")
@@ -190,6 +192,49 @@ class Sponsor(commands.Cog):
         with open(self.user_path, "w") as f:
             json.dump(users,f)
 
+    @commands.command(aliases=["tip", "hint"])
+    async def tipoff(self, ctx, tourn_id: int = commands.parameter(description="The tourn_id of a goblin.")):
+        """
+        Ask Gobbo what he thinks of a goblin's likelihood of generating a profit.
+        He'll be wanting 5% of the goblin's funding or at least 10 Gold...
+
+        Example usage:
+        !tipoff 31
+        """
+
+        model = LOGISTIC_REGRESSION
+
+        if not os.path.exists(self.tournament_path):
+                await ctx.send("There isn't an ongoing tournament right now!")
+                return
+            
+        goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
+
+        if tourn_id not in goblins.tourn_id.to_numpy():
+            await ctx.send("That goblin doesn't exist?")
+            return
+        
+        goblin = goblins.loc[goblins.tourn_id == tourn_id]
+
+        if len(goblin.manager) == 0:
+
+            tip_price = min((10, goblin.funding//20))
+
+            with open(self.user_path, "r") as f:
+                users = json.load(f)
+
+            if users[ctx.author.id].get("GLD", 0) < tip_price:
+                await ctx.send(f"Pahaha you think I'm giving away that information for any less than {tip_price} GLD?")
+            
+            features = goblin[LR_FEATURES].to_numpy().reshape(1,-1)
+            prediction = model.predict(features)[0]
+            response = random.choice(classifier_responses[prediction])
+            await ctx.send(response)
+
+        else:
+            await ctx.send("I can't give away secrets about other people's goblins...")
+
+        
 
 async def setup(bot: commands.bot):
         await bot.add_cog(Sponsor(bot))
