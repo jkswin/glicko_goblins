@@ -216,7 +216,7 @@ class Sponsor(commands.Cog):
         
         goblin = goblins.loc[goblins.tourn_id == tourn_id]
 
-        if len(goblin.manager) == 0:
+        if goblin.manager == None:
 
             tip_price = max((10, goblin.funding//20))
 
@@ -233,7 +233,7 @@ class Sponsor(commands.Cog):
             await ctx.send(response)
 
         else:
-            await ctx.send("I can't give away secrets about other people's goblins...")
+            await ctx.send(f"They're managed by {goblin.manager}! I can't give away secrets about other people's goblins...")
 
         
 
