@@ -228,8 +228,8 @@ class Sponsor(commands.Cog):
             
             features = goblin[LR_FEATURES].to_numpy().reshape(1,-1)
             prediction = model.predict(features)[0]
-            response = random.choice(classifier_responses[prediction])
-            await ctx.send(response)
+            response = f"Thanks for the {tip_price} GLD! " + random.choice(classifier_responses[prediction])
+            await ctx.send(response.replace("[GOBLIN]", goblin["name"].values[0]))
 
         else:
             await ctx.send(f"They're managed by {goblin['manager'].values[0]}! I can't give away secrets about other people's goblins...")
