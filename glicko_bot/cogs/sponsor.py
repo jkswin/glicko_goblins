@@ -222,7 +222,7 @@ class Sponsor(commands.Cog):
             with open(self.user_path, "r") as f:
                 users = json.load(f)
 
-            if users[ctx.message.author.id].get("GLD", 0) < tip_price:
+            if users[str(ctx.message.author.id)].get("GLD", 0) < tip_price:
                 await ctx.send(f"Pahaha you think I'm giving away that information for any less than {tip_price} GLD?")
                 return
             
