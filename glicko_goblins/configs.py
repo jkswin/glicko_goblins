@@ -13,7 +13,7 @@ STAT_DISTRIBUTIONS = {"hp":             (40, 12, 20, 60),
                       "cooldown":       (5, 2, 1, 9), 
                       "guard":          (0.5, 0.25, 0, 0.9),
                       "lr":             (0.01, 0.005, 0.001, 0.03),
-                      "funding":        (200, 150, 5, 1000),
+                      "funding":        (100, 100, 5, 300),
                       }
 
 COMBAT_MULTIPLIERS = {"vanilla":    1/4,

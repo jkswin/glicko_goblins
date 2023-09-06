@@ -149,7 +149,7 @@ class Sponsor(commands.Cog):
             await ctx.send(embed=embed)
         
     @commands.command(aliases=["fund", "invest"])
-    async def sponsor(self, ctx, tourn_id: float = commands.parameter(description="The tourn_id of a goblin."), new_funds: float = commands.parameter(description="How much GLD to sponsor!")):
+    async def sponsor(self, ctx, tourn_id: float = commands.parameter(description="The tourn_id of a goblin.")):
         """
         Invest gold into Goblin Tournaments. Use !scout to see the options.
 
@@ -169,33 +169,18 @@ class Sponsor(commands.Cog):
             await ctx.send("You can't sponsor more than 3 goblins per tournament!")
             return
         
-        funding_cap = max([goblin.funding+1 for goblin in tourn.fighters])
-        
         for goblin in tourn.fighters:
             if goblin.tourn_id == tourn_id:
                 if goblin.manager == None:
-                    current_funds = goblin.funding
+
                     user_funds = users[str(ctx.message.author.id)]["GLD"]
 
-                    if user_funds < current_funds:
+                    if user_funds < goblin.funding:
                         await ctx.send(f"You don't have enough GLD to sponsor {goblin.name} (tourn_id: {goblin.tourn_id}).\nTheir current funding is {goblin.funding}")
                         return
                     
-                    if new_funds > user_funds:
-                        await ctx.send(f"You don't have {new_funds} GLD!")
-                        return
-                    
-                    if new_funds <= current_funds:
-                        await ctx.send(f"{new_funds} isn't enough! {goblin.name} is already getting {current_funds}!\nPlease invest more...")
-                        return
-                    
-                    if new_funds > funding_cap:
-                        await ctx.send(f"The current funding cap for this tournament is {funding_cap}. Make sure your funding is less than or equal to this amount!")
-                        return
-                    
-                    users[str(ctx.message.author.id)]["GLD"] -= new_funds
+                    users[str(ctx.message.author.id)]["GLD"] -= goblin.funding
                     goblin.manager = ctx.message.author.name
-                    goblin.funding = new_funds
                     await ctx.send(f"{ctx.message.author.name} succesfully sponsored {goblin.name} for {goblin.funding} GLD!")
 
                 else:
