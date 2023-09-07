@@ -126,10 +126,8 @@ class Fighter:
         It is also a function of their base eagerness to fight.
         And is realised down the line as a crit chance multiplier based on missing hp.
         """
-        return np.mean(
-                        (rating_deviation/MAX_RD,
-                        eagerness/MAX_EAGERNESS)
-                        )
+        return (eagerness**2) * (rating_deviation/MAX_RD)
+    
     
     @staticmethod
     def _generate_avarice(funding, max_funding, eagerness):
@@ -158,7 +156,7 @@ class Fighter:
         """
         As HP decreases, crit chance increases by a factor of the goblin's guts/determinations.
         """
-        effective_crit = self.crit_prob + ((1 - self.current_hp/self.max_hp) * self.guts)
+        effective_crit = self.crit_prob + np.max(((1 - ((self.current_hp/self.max_hp) * self.guts))/self.eagerness, 0))
         return np.random.uniform(0,1) < effective_crit
     
     def does_dodge(self) -> bool:

@@ -205,7 +205,7 @@ class Background(commands.Cog):
         self.tournament.run_day()
         self.tournament.turnover = 0
         # triple the number of combats to make rounds more interesting than preliminary round
-        self.tournament.daily_combats *= 3
+        self.tournament.daily_combats *= 6
         # save the new tournament state
         self.tournament.save(self.tournament_path)
 
