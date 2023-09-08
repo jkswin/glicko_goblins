@@ -205,7 +205,7 @@ class Sponsor(commands.Cog):
         models = [(LR_FEATURES, LOGISTIC_REGRESSION, ""),
                   (XGB_FEATURES, XGBOOST, "I'm feeling cautious. ")]
         
-        model, features, prompt = random.choice(models)
+        features, model, prompt = random.choice(models)
 
         if not os.path.exists(self.tournament_path):
             await ctx.send("There isn't an ongoing tournament right now!")
