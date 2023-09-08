@@ -297,7 +297,9 @@ class Fighter:
         # to normalise the polygon, divide by the maximum possible value for each
         fc = self._floors_and_ceilings()
         for k in bp.keys():
-            bp[k] /= fc["ceilings"][k]
+            bp[k] = bp[k]/fc["ceilings"][k]
+            if k == "guts":
+                bp["k"] = 1 - bp[k]
 
         sts = list(bp.values())
 
