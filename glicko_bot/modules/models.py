@@ -5,9 +5,16 @@ Home of all ML models used by the bot!
 from joblib import load 
 
 LOGISTIC_REGRESSION = load("models/blind_lr.joblib")
+XGBOOST = load("models/full_xgb.joblib")
+
 LR_FEATURES = ["max_hp", "strength", "cooldown",
              "lr", "eagerness", "funding", "guard_prob", "guardbreak_prob", "parry_prob",
              "crit_prob", "dodge_prob", "guts", "avarice"]
+
+XGB_FEATURES = ["rating", "rating_deviation", "mean_outcome", "max_hp", "strength", "cooldown",
+             "lr", "eagerness", "funding", "guard_prob", "guardbreak_prob", "parry_prob",
+             "crit_prob", "dodge_prob", "guts", "avarice", "wins", "total_games", 
+             "mean_damage", "max_damage"]
 
 
 classifier_responses = {

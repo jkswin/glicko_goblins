@@ -196,13 +196,16 @@ class Sponsor(commands.Cog):
     async def tipoff(self, ctx, tourn_id: int = commands.parameter(description="The tourn_id of a goblin.")):
         """
         Ask Gobbo what he thinks of a goblin's likelihood of generating a profit.
-        He'll be wanting 5% of the goblin's funding or at least 10 Gold...
+        He'll be wanting 15% of the goblin's funding or at least 5 Gold...
 
         Example usage:
         !tipoff 31
         """
 
-        model = LOGISTIC_REGRESSION
+        models = [(LR_FEATURES, LOGISTIC_REGRESSION, ""),
+                  (XGB_FEATURES, XGBOOST, "I'm feeling cautious. ")]
+        
+        model, features, prompt = random.choice(models)
 
         if not os.path.exists(self.tournament_path):
             await ctx.send("There isn't an ongoing tournament right now!")
@@ -217,7 +220,7 @@ class Sponsor(commands.Cog):
         goblin = goblins.loc[goblins.tourn_id == tourn_id]
         if goblin["manager"].values[0] == None:
 
-            tip_price = max((10, goblin["funding"].values[0]//20))
+            tip_price = max((5, (3*goblin["funding"].values[0])//20))
 
             with open(self.user_path, "r") as f:
                 users = json.load(f)
@@ -226,9 +229,9 @@ class Sponsor(commands.Cog):
                 await ctx.send(f"Pahaha you think I'm giving away that information for any less than {tip_price} GLD?")
                 return
             
-            features = goblin[LR_FEATURES].to_numpy().reshape(1,-1)
+            features = goblin[features].to_numpy().reshape(1,-1)
             prediction = model.predict(features)[0]
-            response = f"Thanks for the {tip_price} GLD! " + random.choice(classifier_responses[prediction])
+            response = prompt + f"Thanks for the {tip_price} GLD! " + random.choice(classifier_responses[prediction])
             await ctx.send(response.replace("[GOBLIN]", goblin["name"].values[0]))
 
         else:
