@@ -12,6 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 import random
+import numpy as np
 
 from ..modules.time import tourn_times, start_time, scout_duration
 from ..modules.models import *
@@ -212,6 +213,8 @@ class Sponsor(commands.Cog):
             return
             
         goblins = pd.DataFrame(Tournament.from_save(self.tournament_path).fighter_info())
+        goblins["max_damage"] = goblins["damage_instances"].map(lambda x: max(x, default=0))
+        goblins["mean_damage"] = goblins["damage_instances"].map(lambda x: np.mean(x) if len(x) > 0 else 0)
 
         if tourn_id not in goblins.tourn_id.to_numpy():
             await ctx.send("That goblin doesn't exist?")
