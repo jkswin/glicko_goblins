@@ -299,7 +299,7 @@ class Fighter:
         for k in bp.keys():
             bp[k] = bp[k]/fc["ceilings"][k]
             if k == "guts":
-                bp["k"] = 1 - bp[k]
+                bp[k] = 1 - bp[k]
 
         sts = list(bp.values())
 
