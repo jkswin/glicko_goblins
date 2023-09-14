@@ -362,5 +362,73 @@ class Economy(commands.Cog):
             gold += quantity * exchange_rates.get(currency, 0)
         return gold
     
+
+    @commands.command(aliases=["scratch_card", "sc"])
+    async def scratch(self, ctx):
+        """
+        Pay 100 GLD to buy a scratch card. Match 4 icons to win GLD!
+        1 in 1000 players will win the jackpot of 20,000 GLD!
+
+        Example usage:
+        !scratch 
+        """
+        cost = 100
+        prize_model = {
+            "prizes": [0, 0.5, 1.5, 3, 200],
+            "probabilities": [0.25, 0.45, 0.25, 0.049, 0.001],
+            "emojis": ["\U0001F60B", "\U0001F976", "\U0001F621", "\U0001F480", "\U0001F47B"],
+        }
+        
+
+        user_id = str(ctx.author.id)
+
+        with open(self.WALLET_PATH, "r") as f:
+            users = json.load(f)
+
+        if user_id in users:
+            with open(self.KITTY_PATH, "r") as f:
+                    kitty = json.load(f)
+
+            users[user_id]["GLD"] -= cost
+            ####
+            outcome = random.choices([0,1,2,3,4], weights=prize_model["probabilities"])[0]
+            prize = prize_model["prizes"][outcome]
+            prize_emoji = prize_model["emojis"][outcome]
+
+            scratch_card = []
+            for i in range(len(prize_model["emojis"])):
+                if i != outcome:
+                    scratch_card.extend(3*[prize_model["emojis"][i]])
+
+            random.shuffle(scratch_card)
+            scratch_card = scratch_card[:12]
+
+            if bool(prize):
+                replacements = np.random.choice(range(len(scratch_card)),size=4,replace=False)
+                for c in replacements:
+                    scratch_card[c] = prize_emoji
+
+            scratch_card = "\n".join([" ".join(scratch_card[i:i+4]) for i in range(0, len(scratch_card), 4)])
+            
+            if bool(prize):
+                payout = int(prize * cost)
+                if payout > kitty["tax"] + 10:
+                    payout = kitty["tax"] - 10
+                users[user_id]["GLD"] += payout
+                kitty["tax"] -= payout
+                await ctx.send(f"{scratch_card}\n{ctx.author} matched 4 {prize_emoji}s! They won {payout} GLD!")
+                ####
+            else:
+                await ctx.send(f"{scratch_card}\nUnlucky... No matches!")
+
+            with open(self.WALLET_PATH, "w") as f:
+                json.dump(users, f)
+
+            with open(self.KITTY_PATH, "w") as f:
+                    json.dump(kitty, f)    
+            
+        else:
+            await ctx.send("You don't have a wallet!")
+    
 async def setup(bot: commands.bot):
         await bot.add_cog(Economy(bot))
