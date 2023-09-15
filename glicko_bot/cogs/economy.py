@@ -386,8 +386,12 @@ class Economy(commands.Cog):
             users = json.load(f)
 
         if user_id in users:
+            if users[user_id]["GLD"] < cost:
+                await ctx.send(f"With that much gold shouldn't you be looking at better ways of earning money...")
+                return 
+            
             with open(self.KITTY_PATH, "r") as f:
-                    kitty = json.load(f)
+                kitty = json.load(f)
 
             users[user_id]["GLD"] -= cost
             ####
