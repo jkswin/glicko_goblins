@@ -57,15 +57,16 @@ async def rank_to_currency(session, queue_type, summoner):
     if not response:
         return False
     summoner_id = response.get("id", False)
+    ranked_info = False
 
     if queue_type == "tft":
         ranked_url = f"/tft/league/v1/entries/by-summoner/{summoner_id}"
         response = await fetch_data(session, ROUTE + ranked_url, headers=headers)
-        ranked_info = response[0]
+        if response:
+            ranked_info = response[0]
     elif queue_type == "lol":
         ranked_url = f"/lol/league/v4/entries/by-summoner/{summoner_id}"
         response = await fetch_data(session, ROUTE + ranked_url, headers=headers)
-        ranked_info = False
         for r in response:
             if r["queueType"] == "RANKED_SOLO_5x5":
                 ranked_info = r
