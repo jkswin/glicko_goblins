@@ -367,15 +367,15 @@ class Economy(commands.Cog):
     async def scratch(self, ctx):
         """
         Pay 100 GLD to buy a scratch card. Match 4 icons to win GLD!
-        1 in 1000 players will win the jackpot of 20,000 GLD!
+        1 in 333 players will win the jackpot of 10,000 GLD!
 
         Example usage:
         !scratch 
         """
         cost = 100
         prize_model = {
-            "prizes": [0, 0.5, 1.5, 3, 200],
-            "probabilities": [0.25, 0.45, 0.25, 0.049, 0.001],
+            "prizes": [0, 0.5, 1.5, 2, 100],
+            "probabilities": [0.3, 0.42, 0.15, 0.127, 0.003],
             "emojis": ["\U0001F60B", "\U0001F976", "\U0001F621", "\U0001F480", "\U0001F47B"],
         }
         
