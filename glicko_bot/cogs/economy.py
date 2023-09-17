@@ -18,6 +18,7 @@ import io
 from dotenv import dotenv_values
 import numpy as np
 import datetime
+from datetime import timedelta
 
 sns.set_theme()
 cfg = dotenv_values(".env")
@@ -32,6 +33,7 @@ class Economy(commands.Cog):
         self.HISTORY_PATH = "glicko_bot/data/exchange_history.json"
         self.KITTY_PATH = "glicko_bot/data/kitty.json"
         self.ART_PATH = "glicko_bot/data/art/founding_collection/metadata.jsonl"
+        self.SCRATCH_HISTORY_PATH = "glicko_bot/data/scratch_history.json"
         self.summoners = json.loads(cfg["SUMMONERS"]) #TODO: Make the default wallet load in all currencies from the .env
         self.tax = 0.02
         self.channel_name = "general"
@@ -293,12 +295,23 @@ class Economy(commands.Cog):
             await ctx.send("That makes no sense...")
             return
         
+        #df = pd.read_json(self.HISTORY_PATH).T
+        with open(self.HISTORY_PATH, "r") as f:
+            df_data = json.load(f)
 
+        #df = df.loc[df.index > ago]
 
-        df = pd.read_json(self.HISTORY_PATH).T
-        today = datetime.datetime.today()
-        ago = today - datetime.timedelta(days=n_days)
-        df = df.loc[df.index > ago]
+        filtered_data = {}
+        today = datetime.now()
+
+        for key, value in df_data.items():
+            date_str = key.split(',')[0].strip()
+            date = datetime.strptime(date_str, '%m/%d/%Y')
+
+            if today - date <= timedelta(days=7):
+                filtered_data[key] = value
+        
+        df = pd.DataFrame(df_data).T
 
         if currency in df.columns:
             df = df[[currency]]
@@ -369,6 +382,13 @@ class Economy(commands.Cog):
         Pay 100 GLD to buy a scratch card. Match 4 icons to win GLD!
         1 in 333 players will win the jackpot of 10,000 GLD!
 
+        Odds:
+        0       - 30%
+        50      - 42%
+        150     - 15%
+        200     - 12.7%
+        10,000  - 0.3%
+
         Example usage:
         !scratch 
         """
@@ -429,7 +449,12 @@ class Economy(commands.Cog):
                 json.dump(users, f)
 
             with open(self.KITTY_PATH, "w") as f:
-                    json.dump(kitty, f)    
+                    json.dump(kitty, f)
+
+            with open(self.SCRATCH_HISTORY_PATH, "a") as f:
+                str_time = datetime.datetime.now().strftime("%m_%d_%Y__%H_%M_%S")
+                json.dump({"username": ctx.author, "user_id": user_id, "time":str_time, "payout": payout, "cost": cost}, f)
+                f.write("\n")
             
         else:
             await ctx.send("You don't have a wallet!")
