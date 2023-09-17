@@ -315,6 +315,8 @@ class Economy(commands.Cog):
 
         if currency in df.columns:
             df = df[[currency]]
+        elif currency == "":
+            pass
         else:
             await ctx.send("That currency doesn't exist!")
             return
