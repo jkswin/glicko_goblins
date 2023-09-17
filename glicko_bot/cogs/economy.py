@@ -295,23 +295,10 @@ class Economy(commands.Cog):
             await ctx.send("That makes no sense...")
             return
         
-        #df = pd.read_json(self.HISTORY_PATH).T
-        with open(self.HISTORY_PATH, "r") as f:
-            df_data = json.load(f)
-
-        #df = df.loc[df.index > ago]
-
-        filtered_data = {}
-        today = datetime.datetime.now()
-
-        for key, value in df_data.items():
-            date_str = key.split(',')[0].strip()
-            date = datetime.datetime.strptime(date_str, '%m/%d/%Y')
-
-            if today - date <= timedelta(days=7):
-                filtered_data[key] = value
-        
-        df = pd.DataFrame(df_data).T
+        df = pd.read_json(self.HISTORY_PATH).T
+        today = datetime.datetime.today()
+        ago = today - datetime.timedelta(days=n_days)
+        df = df.loc[df.index > ago]
 
         if currency in df.columns:
             df = df[[currency]]
