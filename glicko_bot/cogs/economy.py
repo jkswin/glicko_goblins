@@ -442,7 +442,7 @@ class Economy(commands.Cog):
 
             with open(self.SCRATCH_HISTORY_PATH, "a") as f:
                 str_time = datetime.datetime.now().strftime("%m_%d_%Y__%H_%M_%S")
-                json.dump({"username": ctx.author, "user_id": user_id, "time":str_time, "payout": payout, "cost": cost}, f)
+                json.dump({"username": str(ctx.author.name), "user_id": user_id, "time":str_time, "payout": payout, "cost": cost}, f)
                 f.write("\n")
             
         else:
