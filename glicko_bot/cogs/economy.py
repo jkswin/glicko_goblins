@@ -302,11 +302,11 @@ class Economy(commands.Cog):
         #df = df.loc[df.index > ago]
 
         filtered_data = {}
-        today = datetime.now()
+        today = datetime.datetime.now()
 
         for key, value in df_data.items():
             date_str = key.split(',')[0].strip()
-            date = datetime.strptime(date_str, '%m/%d/%Y')
+            date = datetime.datetime.strptime(date_str, '%m/%d/%Y')
 
             if today - date <= timedelta(days=7):
                 filtered_data[key] = value
