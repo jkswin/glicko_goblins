@@ -407,7 +407,8 @@ class Economy(commands.Cog):
             outcome = random.choices([0,1,2,3,4], weights=prize_model["probabilities"])[0]
             prize = prize_model["prizes"][outcome]
             prize_emoji = prize_model["emojis"][outcome]
-
+            payout = int(prize * cost)
+            
             scratch_card = []
             for i in range(len(prize_model["emojis"])):
                 if i != outcome:
@@ -424,7 +425,6 @@ class Economy(commands.Cog):
             scratch_card = "\n".join([" ".join(scratch_card[i:i+4]) for i in range(0, len(scratch_card), 4)])
             
             if bool(prize):
-                payout = int(prize * cost)
                 if payout > kitty["tax"] + 10:
                     payout = kitty["tax"] - 10
                 users[user_id]["GLD"] += payout
