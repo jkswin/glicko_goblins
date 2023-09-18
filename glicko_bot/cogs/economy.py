@@ -402,6 +402,7 @@ class Economy(commands.Cog):
             with open(self.KITTY_PATH, "r") as f:
                 kitty = json.load(f)
 
+            kitty["tax"] += cost
             users[user_id]["GLD"] -= cost
             ####
             outcome = random.choices([0,1,2,3,4], weights=prize_model["probabilities"])[0]
