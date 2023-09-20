@@ -3,6 +3,7 @@ import scipy.stats as stats
 import random
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from scipy.stats import beta
 
 from .configs import *
 from .glicko import game_outcome, MAX_RD, MIN_RD
@@ -162,15 +163,23 @@ class Fighter:
     def does_dodge(self) -> bool:
         return np.random.uniform(0,1) < self.dodge_prob
     
-    def learn_from_experience(self, opponent_rating:int, opponent_rd:int):
+    def learn_from_experience(self, actual_outcome:int, opponent_rating:int, opponent_rd:int):
         """
-        Use Glicko's expected game outcome to scale self.skill by beating opponents against the odds.
-        Approximates "learning" from harder games.
-        game_outcome() is closer to 1 the more the opponent is expected to win based on rating and rating deviation.
+        Use Glicko's expected game outcome to scale self.skill.
+        Approximates my experience of learning from wins and defeats
+        relatie to the skill of the opponent.
         """
-        disparity = game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd)
-        self.skill += self.lr * ((2*(disparity - 0.5))**2)
-        self.skill = np.clip(self.skill, a_min=1, a_max=10)
+        expected_outcome = game_outcome(self.rating, opponent_rating, self.rating_deviation, opponent_rd)
+        if actual_outcome == 0:
+            if expected_outcome > 0.5:
+                disparity = self.lr - np.sin(2*np.pi*expected_outcome)
+            else:
+                disparity = self.lr + (1.5 * beta.pdf(1.5*expected_outcome, 2, 4))
+        else:
+            disparity = beta.pdf(expected_outcome, 2, 4)
+        
+        self.skill += self.lr * disparity
+
 
     
     def swing(self, target):

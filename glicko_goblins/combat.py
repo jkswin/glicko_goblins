@@ -208,8 +208,8 @@ class Combat:
         winner = self._check_hps()
         self.fighter1.wins += int(winner==1)
         self.fighter2.wins += int(winner==2)
-        self.fighter1.learn_from_experience(opponent_rating=self.fighter2.rating, opponent_rd=self.fighter2.rating_deviation)
-        self.fighter2.learn_from_experience(opponent_rating=self.fighter1.rating, opponent_rd=self.fighter1.rating_deviation)
+        self.fighter1.learn_from_experience(actual_outcome=int(winner==1),opponent_rating=self.fighter2.rating, opponent_rd=self.fighter2.rating_deviation)
+        self.fighter2.learn_from_experience(actual_outcome=int(winner==2),opponent_rating=self.fighter1.rating, opponent_rd=self.fighter1.rating_deviation)
         self.fighter1.total_games += 1
         self.fighter2.total_games+=1
         self._record_game(winner, time)
