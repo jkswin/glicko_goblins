@@ -1,7 +1,18 @@
-# Mini Project: Glicko Goblins :zombie:
+# Glicko Goblins 🧝‍♂️
+
+- [Overview](#overview)
+- [Conceptual Intricacies](#conceptual-intricacies)
+  * [The Glicko System](#the-glicko-system-🏆)
+  * [The Goblin System](#the-goblin-system-📈)
+  * [The Economy](#the-economy-💰)
+  * [Virtual Pets](#virtual-pets-🦄)
+  * [Real Estate](#real-estate-🏠)
+- [Usage](#usage)
+  * [Setup & Installation](#setup-&-installation-🌱)
+  * [Bot Commands](#bot-commands-🎮)
 
 ## Overview
-This has grown to be more than a mini project... glicko_goblins is now a discord bot hosted locally on a private discord server via a RaspberryPi. There is an economy in which members can trade fake currency. The value of the currency depends on real-time non-financial data such as individuals' video game results or global weather and climate phenomena. Currency can be traded for a centralized currency - Gold - which can be used to sponsor goblins in the Goblin Tournaments that this repo started out as. Sponsored goblins return money to their sponsor based on success. 
+This repo has grown to be more than a mini project... glicko_goblins is now a discord bot hosted locally on a private discord server via a RaspberryPi. There is an economy in which members can trade fake currency. The value of the currency depends on real-time non-financial data such as individuals' video game results or global weather and climate phenomena. Currency can be traded for a centralized currency - Gold - which can be used to sponsor goblins in the Goblin Tournaments that this repo started out as. Sponsored goblins return money to their sponsor based on success. 
 
 To give currency further nuance and purpose, users can purchase image files, collect pets (WIP), purchase virtual property (WIP) or gamble away their earnings if they so wish. User transactions often incurr some form of tax which overflows into a tax pool. The value of the tax pool contributes to the maximum earnings value of each user at any given time, and a proportion of its value is regularly distributed back to users to further encourage interaction.
 
@@ -18,8 +29,8 @@ He gives users the ability to:
 - Gamble
 
 ----
-
-## The Glicko System
+## Conceptual Intricacies
+### The Glicko System 🏆
 Having recently been down the rabbit hole of rating systems, here I implement the Glicko rating system in the context of a probability-based combat simulation game between goblins in a thunderdome.
 
 I recommend the following two papers as both sources of my implementation and very interesting reads:
@@ -34,10 +45,9 @@ In the context of Glicko Goblins, tournaments have a number of contestants, a nu
 
 Contestants can participate in multiple combats per day or not participate at all. If a participant does not participate, they get progressively 'rustier' the more days that pass. 
 
-- The Rating System itself is found in [glicko.py](glicko_goblins/glicko.py)
-    - The time period after which the players' ratings are updated is 1 tournament day. 
+The Rating System itself is found in [glicko.py](glicko_goblins/glicko.py). The time period after which the players' ratings are updated is 1 tournament day. 
 
-## Goblins
+### The Goblin System 📈
 Goblin combat is a simple probability based 1v1. Two goblins swing at one another until the Hit Points (HP) of one goblin are reduced to zero. See *Figure 1* in which a single combat has been represented as a timeline. Here the Purple Goblin successfully defeats the Green Goblin.
 
 ![timeline](md_resources/combat_timeline.png)
@@ -76,13 +86,55 @@ Beyond these three initial stats, exactly what a particular stat describes becom
 
 Continuing to observe Base Stats, **Learning Rate** (LR) is a single factor in determining how much a goblin's power increases from one combat to the next. This is one of two non-static properties that change between combats, the other being **Guts**.
 
-Recalling that goblin combats occurr in a tournament-like structure where goblins are rated, **Learning Rate** is used in conjunction with the Glicko Rating and Rating Deviation of each goblin to determine how much more powerful each goblin should become given the outcome of a combat. 
+Recalling that goblin combats occurr in a tournament-like structure where goblins are rated, **Learning Rate** is used in conjunction with the Glicko Rating and Rating Deviation of each goblin to determine how much more powerful each goblin should become given the outcome of a combat. The exact function for determining the expected result of a combat is [glicko.game_outcome()](glicko_goblins/glicko.py). Goblin **Skill** is initially 1, and increases by the function described in *Figure 5* after each combat. The function is based on my intuition in 1v1 strategic games.
+
+![goblin](md_resources/learning_from_experience.png)
+*Figure 5: Left - 33% of Maximum LR, Right - Maximum LR. The graph represents a single goblin. An Expected Game Outcome above 0.5 signifies the goblin is expected to win, whereas less than 0.5 and the goblin is expected to lose. The true game outcome is colour coded.*
+
+The general idea is that a loss is a learning opportunity. Losing to a better opponent should result in a large knowledge gain, but when losing to a considerably better opponent, the skill gap is too high for much knowledge to be gained. 
+
+Little is to be learned when losing to an opponent of the same skill level, whilst losing to someone who is slightly worse is an opportunity to reflect on your weaknesses. 
+Near guaranteed losses and near guaranteed wins are not valuable.
+
+Winning shares the same concept in that winning against a better opponent is a learning opportunity, only to a lesser degree, however winning a near guaranteed victory does not result in any learning. 
+
+**Learning Rate** then is a scaling factor for this learning function, which produces updates a goblin's current **Skill**.
+
+**Skill** itself is used as a multiplier in damage calculation alongside **Avarice** and the aforementioned **Guts**. They produce **Effective Strength** as a function of the goblin's **Strength** and **Cooldown**.
+
+TODO: WIP HERE
+
+![avarice](md_resources/avarice_mechanic.png)
+![guts](md_resources/guts_mechanic.png
+)
+![earnings](md_resources/round_earnings.png)
+
+
+### The Economy 💰
+WIP
+- Goblin Tournaments
+- Currency Exchange
+- Gambling
+- PNGs
+- UC
+
+### Virtual Pets 🦄
+WIP
+- Gacha System (Pet rarities and variety rarities)
+- Tamagotchi style care
+- Conversation capabilities and memory inspired by Generative Agents are Believable Simulacra of Human Behaviour
+
+### Real Estate 🏠
+WIP
+- Ability to purchase voice channels
+- Owner receives X GLD per interval that users are in the channel
 
 ----
 
 
-## Usage:
+## Usage
 
+### Setup & Installation 🌱
 - Visit the [discord developer portal](https://discord.com/developers/docs/intro) and follow instructions to add a bot to your server.
 
 - Create a .env file in this directory to enable real time currencies. It should contain the following content:
@@ -95,3 +147,6 @@ SUMMONERS = [["GBP", "MadeUpPersonAccountName", "tft"], ["USD", "SecondImaginary
 - Run [setup.py](setup.py)
 
 - Run [main.py](main.py)
+
+### Bot Commands 🎮
+WIP
