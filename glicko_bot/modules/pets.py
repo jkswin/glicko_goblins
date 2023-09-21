@@ -226,6 +226,7 @@ class Pet:
     def from_dict(cls, pet_dict):
         for key in pet_dict:
             setattr(cls, key, pet_dict[key])
+        return cls
     
     @staticmethod
     def one_in(n):
