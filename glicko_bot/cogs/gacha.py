@@ -138,7 +138,7 @@ class GachaPets(commands.Cog):
         pet = Pet.from_dict(pets[user][pet_id])
         pre_str = str(pet)
         pet.give_name(pet_name)
-        pets[user][pet_id] = pet
+        pets[user][pet_id] = pet.__dict__
 
         with open(self.PET_PATH, "w") as f:
             json.dump(pets,f)
