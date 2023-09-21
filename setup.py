@@ -16,6 +16,7 @@ data_stores = {"exchange_history.json": {},
                "exchange.json": {"GLD":1},
                 "users.json": {},
                 "kitty.json": {"tax":100},
+                "pets.json":{},
                 }
 
 
