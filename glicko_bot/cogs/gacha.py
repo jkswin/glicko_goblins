@@ -145,7 +145,7 @@ class GachaPets(commands.Cog):
         
 
     @tasks.loop(hours=1) #TODO: Add time from time.py
-    def wellbeing(self):
+    async def wellbeing(self):
         """
         Check the health state of pets.
         """
