@@ -74,7 +74,7 @@ class GachaPets(commands.Cog):
             return
         
         with open(self.USER_PATH, "r") as f:
-            wallets = f.read()
+            wallets = json.load(f)
         user = str(ctx.author.id)
 
         if user not in wallets.keys():
