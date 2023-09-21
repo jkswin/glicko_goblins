@@ -121,7 +121,7 @@ class Pet:
     def __init__(self, owner: str or None = None):
         
         self.owner = owner
-        self.name = None
+        self.name = ""
         self.species = self._get_species()
         self.colour = self._get_colour()
         self.personality = self._get_personality()
@@ -188,7 +188,7 @@ class Pet:
         with_name = ""
         if self.is_ghost:
             zomb = "Ghost "
-        if self.name is not None:
+        if self.name != "":
             with_name = " the "
 
         return f"{self.name}{with_name}{self.colour.title()} {zomb}{self.species.title()}"

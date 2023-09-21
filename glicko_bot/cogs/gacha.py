@@ -111,7 +111,7 @@ class GachaPets(commands.Cog):
     @commands.command()
     async def name(self, ctx, 
                    pet_id: int = commands.parameter(description="The ID of your pet."),
-                   pet_name: int = commands.parameter(description="The name to give your pet.")):
+                   pet_name: str = commands.parameter(description="The name to give your pet.")):
         """
         Give your pet a name!
 
@@ -135,7 +135,7 @@ class GachaPets(commands.Cog):
             await ctx.send("You don't own a pet with that ID!")
             return
         
-        pets[user][pet_id].name = pet_name
+        pets[user][pet_id].give_name(pet_name)
 
         with open(self.PET_PATH, "w") as f:
             json.dump(pets,f)
