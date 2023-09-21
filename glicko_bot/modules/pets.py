@@ -224,9 +224,10 @@ class Pet:
     
     @classmethod
     def from_dict(cls, pet_dict):
+        ob = cls()
         for key in pet_dict:
-            setattr(cls, key, pet_dict[key])
-        return cls
+            setattr(ob, key, pet_dict[key])
+        return ob
     
     @staticmethod
     def one_in(n):
