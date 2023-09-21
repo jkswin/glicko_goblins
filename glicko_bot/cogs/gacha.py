@@ -135,12 +135,15 @@ class GachaPets(commands.Cog):
             await ctx.send("You don't own a pet with that ID!")
             return
         
-        pets[user][pet_id].give_name(pet_name)
+        pet = Pet.from_dict(pets[user][pet_id])
+        pre_str = str(pet)
+        pet.give_name(pet_name)
+        pets[user][pet_id] = pet
 
         with open(self.PET_PATH, "w") as f:
             json.dump(pets,f)
 
-        await ctx.send(f"{str(ctx.author.name)}'s {str(pets[user][pet_id])} is now called {pet_name}!")
+        await ctx.send(f"{str(ctx.author.name)}'s {pre_str} is now called {pet_name}!")
      
         
 
