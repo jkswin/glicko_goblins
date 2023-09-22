@@ -116,6 +116,29 @@ PET_PERSONALITIES = [
 
 PET_DATE_STRF = "%d-%m-%y_%H-%M-%S"
 
+GHOST_HUNGER_THRESH = 12
+HUNGER_THRESH = 48
+FULLNESS_GAINED = 12
+
+MAX_AFFECTION = 100
+MAX_FILTH = 100
+
+HUNGER_ADVERBS = {  0.25: "quite",
+                    0.5: "pretty",
+                    0.75: "very",
+                    1: "dangerously",
+                 }
+AFFECTION_ADJECTIVES = {    0.25: "neglected",
+                            0.5: "okay",
+                            0.75: "happy",
+                            1: "ecstatic",
+                        }
+FILTH_ADJECTIVES = {0.25: "clean",
+                    0.5: "scruffy",
+                    0.75: "dirty",
+                    1: "filthy",
+                 }
+
 class Pet:
 
     def __init__(self, owner: str or None = None):
@@ -124,20 +147,23 @@ class Pet:
         self.name = ""
         self.species = self._get_species()
         self.colour = self._get_colour()
+        self.rarity = self._get_rarity()
         self.personality = self._get_personality()
         self.birthday = self.str_date_now()
-        self.deathday = None
-        self.id = None
+        self.deathday = False
+        self.cause_of_death = False
+        self.id = False
 
         self.hunger = 0
         self.last_meal = self.birthday
         self.is_alive = True
         self.is_ghost = False
+        self.n_deaths = 0
+        self.filth = 0
+        self.affection = 0
 
         self.memory = []
-        self.conversation_history = None
-
-        
+        self.conversation_history = False
 
         self._init_odds()
 
@@ -147,26 +173,43 @@ class Pet:
     def reply(self):
         return "..."
 
-    def _death_check(self):
+    def _death_check(self, return_cause:bool=False):
+        cause = ""
+        pre_check = self.is_alive
 
         if self.is_ghost:
-            if self.hunger > 1:
+            if self.hunger > GHOST_HUNGER_THRESH:
                 self.is_alive = False
+                cause = "ghostly hunger"
 
-        if self.hunger > 72:
+        if self.hunger > HUNGER_THRESH:
             if self.coin_toss():
                 self.is_alive = False
+                cause = "hunger"
 
         if self.get_age() > PET_SPECIES[self.species]["max_age"]:
             self.is_alive = False
+            cause = "old age"
 
         elif self.get_age() > PET_SPECIES[self.species]["min_age"]:
             if self.coin_toss():
                 self.is_alive = False
+                cause = "old age"
+
+        if self.filth > MAX_FILTH/2:
+            if self.one_in(MAX_FILTH - self.filth + 1):
+                self.alive = False
+                cause = "disease"
+
+        if pre_check != self.is_alive:
+            self.n_deaths += 1
 
         if not self.is_alive and not self.is_ghost:
             self.deathday = self.str_date_now()
-            
+
+        if return_cause:
+            return (self.is_alive, cause)
+
         return self.is_alive
     
     def _init_odds(self):
@@ -201,7 +244,8 @@ class Pet:
         self.name = name
 
     def feed(self):
-        self.hunger -= 12
+        self.hunger -= FULLNESS_GAINED
+        self.last_meal = datetime.datetime.now().strftime(PET_DATE_STRF)
         if self.hunger < 0:
             self.hunger = 0
 
@@ -221,6 +265,12 @@ class Pet:
                 self.is_alive = True
 
         return self.is_alive
+    
+    def _get_rarity(self):
+        """Return rarity as value between 0 and 1000"""
+        relative_colour_rarity = (100 - PET_COLOURS[self.colour]) * 10
+        relative_species_rarity = (100 - PET_SPECIES[self.species]["rarity"]) * 10
+        return (relative_colour_rarity + relative_species_rarity)//2
     
     @classmethod
     def from_dict(cls, pet_dict):
