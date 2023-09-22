@@ -237,7 +237,7 @@ class Pet:
         return f"{self.name}{with_name}{self.colour.title()} {zomb}{self.species.title()}"
         
     def get_age(self):
-        return (datetime.datetime.today().date() - 
+        return (datetime.datetime.now() - 
                 datetime.datetime.strptime(self.birthday, PET_DATE_STRF)).days
     
     def give_name(self, name:str):
@@ -289,7 +289,7 @@ class Pet:
     
     @staticmethod
     def str_date_now():
-        return datetime.datetime.strftime(datetime.datetime.today().date(),
+        return datetime.datetime.strftime(datetime.datetime.now(),
                                                    PET_DATE_STRF,
                                                    )
 
