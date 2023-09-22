@@ -34,7 +34,7 @@ class GachaPets(commands.Cog):
     @commands.command()
     async def gacha(self, ctx, 
                     stars: int=commands.parameter(description="The tier of egg to purchase.", default=1),
-                    egg_type: int=commands.parameter(description="The type of egg to purchase.", default="standard")):
+                    egg_type: str=commands.parameter(description="The type of egg to purchase.", default="standard")):
         """
         Open an egg to hatch a Pet! Eggs come in different varieties.
         <standard> - randomly draws a pet
