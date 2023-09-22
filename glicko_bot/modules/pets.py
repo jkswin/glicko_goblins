@@ -123,20 +123,22 @@ FULLNESS_GAINED = 12
 MAX_AFFECTION = 100
 MAX_FILTH = 100
 
-HUNGER_ADVERBS = {  0.25: "quite",
-                    0.5: "pretty",
+HUNGER_ADVERBS = {  1: "dangerously",
                     0.75: "very",
-                    1: "dangerously",
+                    0.5: "pretty",
+                    0.25: "quite",                 
                  }
-AFFECTION_ADJECTIVES = {    0.25: "neglected",
-                            0.5: "okay",
+
+AFFECTION_ADJECTIVES = {    1: "ecstatic", 
                             0.75: "happy",
-                            1: "ecstatic",
+                            0.5: "okay",
+                            0.25: "neglected",      
                         }
-FILTH_ADJECTIVES = {0.25: "clean",
-                    0.5: "scruffy",
-                    0.75: "dirty",
-                    1: "filthy",
+
+FILTH_ADJECTIVES = {    1: "filthy",
+                        0.75: "dirty",
+                        0.5: "scruffy",
+                        0.25: "clean",
                  }
 
 class Pet:

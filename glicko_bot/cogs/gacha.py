@@ -335,19 +335,19 @@ class GachaPets(commands.Cog):
         if pet.is_ghost:
             thresh = GHOST_HUNGER_THRESH
         
-        for val, adv in AFFECTION_ADJECTIVES.items()[::-1]:
+        for val, adv in HUNGER_ADVERBS.items():
             if pet.hunger >= (thresh * val):
                 report += f"Hunger: {adv} hungry.\n"
                 break
         
         # Affection checks
-        for val, adv in AFFECTION_ADJECTIVES.items()[::-1]:
+        for val, adv in AFFECTION_ADJECTIVES.items():
             if pet.affection/MAX_AFFECTION >= val:
                 report += f"Mood: {adv}\n"
                 break
         
         # Filth checks
-        for val, adv in FILTH_ADJECTIVES.items()[::-1]:
+        for val, adv in FILTH_ADJECTIVES.items():
             if pet.filth/MAX_FILTH >= val:
                 report += f"Cleanliness: {adv}\n"
                 break
