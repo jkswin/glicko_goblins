@@ -88,7 +88,7 @@ class GachaPets(commands.Cog):
         if user not in pets.keys():
             pets[user] = []
 
-        if sum([int(p.is_alive) for p in pets[user]]) > 5:
+        if sum([int(Pet.from_dict(p).is_alive) for p in pets[user]]) > 5:
             await ctx.send("Your enclosure is only big enough to hold 5 pets!")
             return 
         
