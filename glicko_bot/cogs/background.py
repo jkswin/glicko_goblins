@@ -367,7 +367,7 @@ class Background(commands.Cog):
         # calculate the total amount of money in circulation
         users_total = sum(user_golds.values())
         # for each user, give them a proportion of the tax based on their relative proportion of all gold in existence.
-        payouts = {k:(1-(v/users_total))*total_credit for k,v in user_golds.items()}
+        payouts = {k:((1-(v/users_total))**len(users.keys()))*total_credit for k,v in user_golds.items()}
         
         # update each user's gold
         for user in payouts:
