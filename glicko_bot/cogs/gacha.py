@@ -254,7 +254,7 @@ class GachaPets(commands.Cog):
         with open(self.PET_PATH, "r") as f:
             pet_log = json.load(f)
 
-        for owner_id, pet_list in pet_log:
+        for owner_id, pet_list in pet_log.items():
             user = self.bot.get_user(int(owner_id))
             output = []
             for pet in pet_list:
@@ -282,7 +282,7 @@ class GachaPets(commands.Cog):
         with open(self.PET_PATH, "r") as f:
             pet_log = json.load(f)
 
-        for owner_id, pet_list in pet_log:
+        for owner_id, pet_list in pet_log.items():
             user = self.bot.get_user(int(owner_id))
             report = False
             output = []
