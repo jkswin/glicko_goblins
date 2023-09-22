@@ -326,6 +326,7 @@ class GachaPets(commands.Cog):
     async def before_background_task(self):
         await self.bot.wait_until_ready()
 
+    @staticmethod
     def create_report(pet: Pet) -> str:
         report = ""
 
