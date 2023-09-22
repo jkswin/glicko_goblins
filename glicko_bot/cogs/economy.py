@@ -370,13 +370,13 @@ class Economy(commands.Cog):
         """
         Pay 100 GLD to buy a scratch card. Match 4 icons to win GLD!
         1 in 333 players will win the jackpot of 10,000 GLD!
-        Expected Return: 99.9 GLD
+        Expected Return: 99.3 GLD
 
         Odds:
         0       - 30%
-        50      - 42%
-        150     - 13%
-        200     - 14.7%
+        50      - 43.1%
+        150     - 10.9%
+        200     - 15.7%
         10,000  - 0.3%
 
         Example usage:
@@ -385,7 +385,7 @@ class Economy(commands.Cog):
         cost = 100
         prize_model = {
             "prizes": [0, 0.5, 1.5, 2, 100],
-            "probabilities": [0.3, 0.42, 0.13, 0.147, 0.003],
+            "probabilities": [0.3, 0.431, 0.109, 0.157, 0.003],
             "emojis": ["\U0001F60B", "\U0001F976", "\U0001F621", "\U0001F480", "\U0001F47B"],
         }
         
