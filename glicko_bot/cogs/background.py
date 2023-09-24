@@ -198,7 +198,7 @@ class Background(commands.Cog):
             tax = json.load(f)["tax"]
 
         for fighter in self.tournament.fighters:
-            fighter.funding += int(np.log2(tax))
+            fighter.funding += int(tax**(5/9))
 
         # run one tournament day to generate preliminary ratings
         self.tournament.run_day()
