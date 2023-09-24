@@ -150,15 +150,33 @@ class GachaPets(commands.Cog):
     async def health(self, ctx, 
                    pet_id: int = commands.parameter(description="The ID of your pet.")):
         """
-        CURRENTLY DOES NOTHIN! 
         Display information about your pet's wellbeing.
 
         Example usage:
         !health 0
         """
 
-        # Show their name, birthday, age, hunger level, cleanliness, mood, personality
-        return
+        user = str(ctx.author.id)
+       
+        with open(self.PET_PATH, "r") as f:
+            pets = json.load(f)
+        
+        if user not in pets.keys():
+            await ctx.send("You don't have any pets!")
+            return 
+        
+        if pet_id >= len(pets[user]) or pet_id < 0:
+            await ctx.send("You don't own a pet with that ID!")
+            return
+        
+        pet = Pet.from_dict(pets[user][pet_id])
+
+        if not pet.is_alive:
+            await ctx.send(f"I'm sorry... this pet left us on {pet.deathday}\n**RIP**")
+            return
+        report = self.create_report(pet)
+        
+        await ctx.send(report)
     
     @commands.command()
     async def pets(self, ctx):
@@ -239,12 +257,45 @@ class GachaPets(commands.Cog):
         with open(self.PET_PATH, "w") as f:
             json.dump(pets,f)
 
-  
-    #3 TODO: !health, show birthday and also use Pet.get_age()
+    @commands.command()
+    async def clean(self, ctx, 
+                   pet_id: int = commands.parameter(description="The ID of your pet.")):
+        """
+        Clean your pet!
+
+        Example usage:
+        !clean 0
+        """
+        user = str(ctx.author.id)
+       
+        with open(self.PET_PATH, "r") as f:
+            pets = json.load(f)
+        
+        if user not in pets.keys():
+            await ctx.send("You don't have any pets!")
+            return 
+        
+        if pet_id >= len(pets[user]) or pet_id < 0:
+            await ctx.send("You don't own a pet with that ID!")
+            return
+        
+        pet = Pet.from_dict(pets[user][pet_id])
+
+        if not pet.is_alive:
+            await ctx.send(f"I'm sorry... this pet left us on {pet.deathday}\n**RIP**")
+            return
+
+        pet.clean()
+        await ctx.send(f"{str(pet)} now looks spotless!")
+
+        pets[user][pet_id] = pet.__dict__
+
+        with open(self.PET_PATH, "w") as f:
+            json.dump(pets,f)
+
     #5 TODO: !voodoo attempt to revive deceased pets if there is space
     #4 TODO: !graveyard list all deceased pets
     #3 TODO: !play raise their affection. Decreases over time. If affection is maxed, they dont want to play
-    #2 TODO: !clean reduce Pet.filth. Increases over time
 
     @tasks.loop(hours=2)
     async def wellbeing(self):
@@ -283,15 +334,13 @@ class GachaPets(commands.Cog):
             pet_log = json.load(f)
 
         for owner_id, pet_list in pet_log.items():
-            user = self.bot.get_user(int(owner_id))
-            report = False
             output = []
             for pet in pet_list:
                 pet = Pet.from_dict(pet)
 
                 if pet.is_alive:
                     pet.hunger += 1
-                    pet.filth += 1
+                    pet.filth += 4
                     pet.affection -= 1
 
                     if pet.affection > MAX_AFFECTION:
@@ -304,19 +353,9 @@ class GachaPets(commands.Cog):
                     elif pet.filth < 0:
                         pet.filth = 0
 
-                    if any([(pet.hunger >= HUNGER_THRESH//2 and not pet.is_ghost), 
-                            (pet.hunger >= GHOST_HUNGER_THRESH//2 and pet.is_ghost),
-                            (pet.filth >= MAX_FILTH//2),
-                            (pet.affection <= pet.affection//2),
-                            ]):
-                            report = self.create_report(pet)
-
                 output.append(pet.__dict__)
 
             pet_log[owner_id] = output
-
-            if report:
-                await user.send(report)
         
         with open(self.PET_PATH, "w") as f:
             json.dump(pet_log,f)
@@ -328,7 +367,7 @@ class GachaPets(commands.Cog):
 
     @staticmethod
     def create_report(pet: Pet) -> str:
-        report = ""
+        report = f"**{str(pet)}**\nAge: {pet.get_age()} days\nTemperament: {pet.personality}\nFavourite Food: {PET_SPECIES[pet.species]['food']}\n"
 
         # Hunger checks
         thresh = HUNGER_THRESH
@@ -337,19 +376,19 @@ class GachaPets(commands.Cog):
         
         for val, adv in HUNGER_ADVERBS.items():
             if pet.hunger >= (thresh * val):
-                report += f"Hunger: {adv} hungry.\n"
+                report += f"They are *{adv} hungry*.\n"
                 break
         
         # Affection checks
         for val, adv in AFFECTION_ADJECTIVES.items():
             if pet.affection/MAX_AFFECTION >= val:
-                report += f"Mood: {adv}\n"
+                report += f"They are feeling *{adv}*.\n"
                 break
         
         # Filth checks
         for val, adv in FILTH_ADJECTIVES.items():
             if pet.filth/MAX_FILTH >= val:
-                report += f"Cleanliness: {adv}\n"
+                report += f"They look *{adv}*.\n"
                 break
         
         if len(report) > 0:

@@ -138,7 +138,7 @@ AFFECTION_ADJECTIVES = {    1: "ecstatic",
 FILTH_ADJECTIVES = {    1: "filthy",
                         0.75: "dirty",
                         0.5: "scruffy",
-                        0.25: "clean",
+                        0.25: "not fresh",
                  }
 
 class Pet:
@@ -250,6 +250,9 @@ class Pet:
         self.last_meal = datetime.datetime.now().strftime(PET_DATE_STRF)
         if self.hunger < 0:
             self.hunger = 0
+
+    def clean(self):
+        self.filth = 0
 
     def get_food(self):
         if self.is_ghost:
