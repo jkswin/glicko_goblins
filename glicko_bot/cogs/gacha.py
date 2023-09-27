@@ -25,7 +25,6 @@ class GachaPets(commands.Cog):
         self.USER_PATH = "glicko_bot/data/users.json"
         self.KITTY_PATH = "glicko_bot/data/kitty.json"
         self.PET_PATH = "glicko_bot/data/pets.json"
-        self.SUMMONERS = json.loads(cfg["SUMMONERS"])
 
     def cog_unload(self):
         self.wellbeing.cancel()

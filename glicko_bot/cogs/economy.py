@@ -34,7 +34,7 @@ class Economy(commands.Cog):
         self.KITTY_PATH = "glicko_bot/data/kitty.json"
         self.ART_PATH = "glicko_bot/data/art/founding_collection/metadata.jsonl"
         self.SCRATCH_HISTORY_PATH = "glicko_bot/data/scratch_history.json"
-        self.summoners = json.loads(cfg["SUMMONERS"]) #TODO: Make the default wallet load in all currencies from the .env
+        self.coin_config_path = "coin.cfg"
         self.tax = 0.02
         self.channel_name = "general"
 
@@ -55,8 +55,12 @@ class Economy(commands.Cog):
             # give them a wallet with all possible currencies at 0
             # and 100 GLD
             users[user_id] = {"GLD": 100}
-            for currency in self.summoners:
-                currency_name = currency[0]
+
+            with open(self.config_path, "r") as f:
+                cfg = [json.loads(line) for line in f]
+
+            for coin_type, meta in cfg.items():
+                currency_name = meta["name"]
                 users[user_id].update({currency_name:0})
 
             # save updated wallets
@@ -105,8 +109,12 @@ class Economy(commands.Cog):
             users = json.load(f)
         if user_id not in users:
             users[user_id] = {"GLD": 0}
-            for currency in self.summoners:
-                currency_name = currency[0]
+
+            with open(self.config_path, "r") as f:
+                cfg = [json.loads(line) for line in f]
+
+            for coin_type, meta in cfg.items():
+                currency_name = meta["name"]
                 users[user_id].update({currency_name:0})
                 
             with open(self.WALLET_PATH, "w") as f:
