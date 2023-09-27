@@ -19,7 +19,7 @@ class Coin:
     """
     Abstract coin class that depends on some API for calculating value.
     """
-    def __init__(self, session: aiohttp.ClientSession, name: str = None, noise:bool=False):
+    def __init__(self, session: aiohttp.ClientSession, name: str = None, noise:bool=True):
         self.session = session
         self.name = name
         self.headers = {}
@@ -52,7 +52,7 @@ class Coin:
         pass
             
 class RiotCoin(Coin):
-    def __init__(self, session: aiohttp.ClientSession, name:str, summoner:str, queue_type:str, noise:bool=False):
+    def __init__(self, session: aiohttp.ClientSession, name:str, summoner:str, queue_type:str, noise:bool=True):
         super().__init__(session, name, noise)
         self.route = "https://euw1.api.riotgames.com"
         self.n2i = {
@@ -158,7 +158,7 @@ class RiotCoin(Coin):
         return wins**2
 
 class AirCoin(Coin):
-    def __init__(self, session: aiohttp.ClientSession, name:str, latitude: str, longitude: str, noise:bool=False):
+    def __init__(self, session: aiohttp.ClientSession, name:str, latitude: str, longitude: str, noise:bool=True):
         super().__init__(session, name, noise)
         self.route = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={latitude}&longitude={longitude}&hourly=pm10&timezone=Europe%2FLondon"
 
@@ -181,7 +181,7 @@ class CoinBag(Coin):
     """
     Mean pooling of multiple coin instances.
     """
-    def __init__(self, session, name:str, coins=None, noise:bool=False) -> None:
+    def __init__(self, session, name:str, coins=None, noise:bool=True) -> None:
         super().__init__(session, name, noise)
         self.coins = []
         if coins is not None:
