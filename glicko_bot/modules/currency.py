@@ -300,4 +300,5 @@ async def currency_query(config_path):
                 if not val:
                     val = 1
                 output[coin.name] = val
+                await asyncio.sleep(0.5)
     return output
