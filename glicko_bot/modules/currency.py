@@ -290,29 +290,9 @@ async def currency_query(config_path):
 
     async with aiohttp.ClientSession() as session:
         if coin_configs_are_valid(cfg):
-            for coin in example_coin_config:
+            for coin in cfg:
                 coin_type = COIN_FROM_TYPE[coin["coin_type"]]
                 coin = coin_type(session, **coin["meta"])
                 val = await coin.value()
                 output[coin.name] = val
     return output
-
-##### BASIC INITIAL TEST #####
-async def main():
-    with open("coin.cfg", "w") as f:
-        for line in example_coin_config:
-            json.dump(line, f)
-            f.write("\n")
-
-    async with aiohttp.ClientSession() as session:
-        if coin_configs_are_valid(example_coin_config):
-            for coin in example_coin_config:
-                coin_type = COIN_FROM_TYPE[coin["coin_type"]]
-                coin = coin_type(session, **coin["meta"])
-                val = await coin.value()
-                print(coin.name, val)
-
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
