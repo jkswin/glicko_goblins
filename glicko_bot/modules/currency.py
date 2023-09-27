@@ -174,7 +174,10 @@ class AirCoin(Coin):
         current_time_timestamp = pd.Timestamp(datetime.combine(pd.Timestamp.now().date(), current_time))
         # Find the closest row to the current time
         closest_row = df.iloc[(df['time'] - current_time_timestamp).abs().idxmin()]
-        return closest_row["pm10"]
+        value = closest_row["pm10"]
+        if self.noise:
+            value = self.gaussian_noise(value)
+        return value
 
 
 class CoinBag(Coin):
