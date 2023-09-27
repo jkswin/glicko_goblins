@@ -5,7 +5,7 @@ import datetime
 from glicko_goblins.combat import Tournament
 import asyncio
 import numpy as np
-from ..modules.currency_dependencies import currency_query
+from ..modules.currency import currency_query
 from ..modules.time import *
 from dotenv import dotenv_values
 import pandas as pd
@@ -39,7 +39,8 @@ class Background(commands.Cog):
         self.user_path = "glicko_bot/data/users.json"
         self.kitty_path = "glicko_bot/data/kitty.json"
         self.archive_path = "glicko_bot/data/archive/"
-        self.summoners = json.loads(cfg["SUMMONERS"])
+        #self.summoners = json.loads(cfg["SUMMONERS"])
+        self.coin_config_path = "coin.cfg"
         self.tax = 0.02
 
     def cog_unload(self):
@@ -242,29 +243,7 @@ class Background(commands.Cog):
             rates = json.load(f)
             previous_rates = rates.copy()
 
-        # request and update the new currencies
-        new_rates = await currency_query(self.summoners)
-        new_rates_copy = new_rates.copy()
-
-        # calculate how much of each currency is currently in circulation
-        totals = {}
-        with open(self.user_path) as f:
-            user_wallets = json.load(f)
-        for currency_quantities in user_wallets.values():
-            for currency, quantity in currency_quantities.items():
-                if currency != "GLD" and currency in new_rates.keys():
-                    if currency not in totals.keys():
-                        totals[currency] = quantity
-                    else:
-                        totals[currency] += quantity
-
-        # take the log of the totals to adjust the rates based on quantity
-        log_totals = {currency: np.log10(1 + quantity) for currency, quantity in totals.items()}
-        # and use it to adjust them
-        new_rates = {key: np.max((new_rates[key] - log_totals.get(key,0), 0.0001))
-                       for key in new_rates.keys()}
-
-        # update the rates. This includes any rates that didn't exist prior to this loop
+        new_rates = await currency_query(self.coin_config_path)
         rates.update(new_rates)
 
         # now check if any of the users don't have a wallet slot for new currencies
@@ -284,7 +263,7 @@ class Background(commands.Cog):
         # make a record of the update
         str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         with open("rate_update.log", "a") as f:
-            f.write(f"{str_time}\nNew Rates before circulation adjustment:{new_rates_copy}\nTotal of each currency in server: {totals}\nLogarithm of totals: {log_totals}\nUpdated rates: {new_rates}\n\n\n")
+            f.write(f"{str_time}\nNew Rates before circulation adjustment:{previous_rates}\nUpdated rates: {rates}\n\n\n")
         
         # save the new exchange rates
         with open(self.exchange_path, "w") as f:

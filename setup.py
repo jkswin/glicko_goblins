@@ -19,15 +19,51 @@ data_stores = {"exchange_history.json": {},
                 "pets.json":{},
                 }
 
+coin_config_path = "coin.cfg"
+example_coin_config = [{"coin_type": "riot",
+                        "meta": {"name": "BAB",
+                                 "summoner":"thebausffs",
+                                 "queue_type":"lol"}},
+
+                       {"coin_type": "riot",
+                        "meta": {"name": "DRT",
+                                 "summoner":"drututt",
+                                 "queue_type":"lol"}},
+
+                        {"coin_type": "riot",
+                         "meta": {"name": "WET",
+                                  "summoner":"Wet Jungler",
+                                  "queue_type":"tft"}},
+
+                        {"coin_type": "air",
+                         "meta": {"name": "ULN",
+                                  "latitude":"47.91",
+                                  "longitude":"106.88"}},
+
+                        {"coin_type": "bag",
+                         "meta": {"name":"GRP",
+                                  "coins": [{"coin_type": "riot",
+                                            "meta": {"name": "WET",
+                                                     "summoner":"Wet Jungler",
+                                                     "queue_type":"tft"
+                                                    }},
+                                            {"coin_type": "air",
+                                            "meta": {"name": "ULN",
+                                                     "latitude":"47.91",
+                                                     "longitude":"106.88"}},
+                                            ]}}
+                       ]
+
 
 if __name__ == "__main__":
     
     # try install dependencies with pip
-    try:
-        subprocess.run(["pip", "install", "-r", "requirements.txt"])
-    except Exception as e:
-        print(e)
-        print("Requirements will need installing manually.")
+    if input("Auto install requirements? (leave blank for no)"):
+        try:
+            subprocess.run(["pip", "install", "-r", "requirements.txt"])
+        except Exception as e:
+            print(e)
+            print("Requirements will need installing manually.")
 
     # try create .env file
     if not os.path.exists(".env"):
@@ -58,6 +94,15 @@ if __name__ == "__main__":
         print("Done")
     else:
         print(f"{backup_path} already exists.")
+
+    # try create base coin config
+    if not os.path.exists(coin_config_path):
+        print("Creating example coin configs...")
+        with open(coin_config_path, "w") as f:
+            for line in example_coin_config:
+                json.dump(line,f)
+                f.write("\n")
+        print("Done")
 
     # try create artwork folder
     ap = os.path.join(data_path, "art")

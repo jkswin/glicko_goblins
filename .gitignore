@@ -6,6 +6,7 @@ glicko_bot/backup
 glicko_goblins/data/*
 .min_venv
 *.hdf
+coin.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
