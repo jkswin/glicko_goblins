@@ -294,6 +294,7 @@ async def currency_query(config_path):
                 coin_type = COIN_FROM_TYPE[coin["coin_type"]]
                 coin = coin_type(session, **coin["meta"])
                 val = await coin.value()
-                if val:
-                    output[coin.name] = val
+                if not val:
+                    val = 1
+                output[coin.name] = val
     return output

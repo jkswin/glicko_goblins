@@ -199,7 +199,7 @@ class GachaPets(commands.Cog):
         for pet in pets[user]:
             pet = Pet.from_dict(pet)
             if pet.is_alive:
-                embed.add_field(name=str(pet), value=f"Age: {pet.get_age()} days\nRarity: {pet.rarity}")
+                embed.add_field(name=str(pet) + f"({pet.id})", value=f"Age: {pet.get_age()} days\nRarity: {pet.rarity}")
 
         if len(embed.fields) > 0:
             await ctx.send(embed=embed)
@@ -367,7 +367,7 @@ class GachaPets(commands.Cog):
 
     @staticmethod
     def create_report(pet: Pet) -> str:
-        report = f"**{str(pet)}**\nAge: {pet.get_age()} days\nTemperament: {pet.personality}\nFavourite Food: {PET_SPECIES[pet.species]['food']}\n"
+        report = f"Age: {pet.get_age()} days\nTemperament: {pet.personality}\nFavourite Food: {PET_SPECIES[pet.species]['food']}\n"
 
         # Hunger checks
         thresh = HUNGER_THRESH
