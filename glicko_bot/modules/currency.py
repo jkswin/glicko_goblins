@@ -77,6 +77,9 @@ class RiotCoin(Coin):
         self.header_options = {"lol":{"X-Riot-Token": self.cfg["RIOT_LOL_TOKEN"]},
                                 "tft":{"X-Riot-Token": self.cfg["RIOT_TFT_TOKEN"]},
                                 }
+        self.challenger_endpoints = {"tft":"/tft/league/v1/challenger",
+                                    "lol":"/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5",
+                                    }
 
         self.summoner = summoner
         self.queue_type = queue_type
@@ -125,7 +128,7 @@ class RiotCoin(Coin):
         Calculate a currency value from performance metrics.
         """
         high_elo = ["MASTER", "GRANDMASTER", "CHALLENGER"]
-        challenger_league_endpoint = "/tft/league/v1/challenger"
+        challenger_league_endpoint = self.challenger_endpoints[self.queue_type]
         base_value = 1 + self.rank_multipliers[tier] - rank
         if tier not in high_elo:
             value = base_value + ((4 * lp) / 100)
@@ -134,6 +137,7 @@ class RiotCoin(Coin):
             if not response:
                 warnings.warn(f"Could not retrieve data from {challenger_league_endpoint}")
                 return False
+
             lps = [val.get("leaguePoints", 1) for val in response["entries"]]
             average_challenger = np.mean(lps)
             top_player_lp = np.max(lps)
@@ -305,3 +309,6 @@ async def currency_query(config_path):
                 output[coin.name] = val
                 await asyncio.sleep(0.5)
     return output
+
+if __name__ == "__main__":
+    asyncio.run(currency_query("coin.cfg"))
