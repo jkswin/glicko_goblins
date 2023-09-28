@@ -74,10 +74,13 @@ class RiotCoin(Coin):
                     "CHALLENGER":   33,
                 }
         self.queue_types = ["lol", "tft"]
-        self.headers = {"X-Riot-Token": self.cfg["RIOT"]}
+        self.header_options = {"lol":{"X-Riot-Token": self.cfg["RIOT_LOL_TOKEN"]},
+                                "tft":{"X-Riot-Token": self.cfg["RIOT_TFT_TOKEN"]},
+                                }
 
         self.summoner = summoner
         self.queue_type = queue_type
+        self.headers = self.header_options.get(self.queue_type, {})
 
         
     async def value(self) -> float or False:
