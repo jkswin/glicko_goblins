@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-from dotenv import dotenv_values
+from config import Auth
 import os
-
-cfg = dotenv_values(".env")
+#from glicko_bot.modules import mongo
 
 
 # initialise logging
@@ -40,8 +39,16 @@ async def on_ready():
                 print(f"- {filename} ❌ ")
                 print(e)
 
+    #await mongo.DB.connect()
+    #if not mongo.DB.is_connected:
+    #    raise RuntimeError("Database access denied")
+
+    #await bank_funcs.create_table()
+    #await inventory_funcs.create_table()
+    #print("Created/modified tables successfully")
+
 if __name__ == "__main__":
-    bot.run(cfg["DISCORD"], 
+    bot.run(Auth.DISCORD_TOKEN, 
             log_handler=handler, 
             log_level=logging.ERROR,
             )
