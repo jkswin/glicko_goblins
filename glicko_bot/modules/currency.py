@@ -305,7 +305,7 @@ async def currency_query(config_path):
                 coin = coin_type(session, **coin["meta"])
                 val = await coin.value()
                 if not val:
-                    val = 1
+                    val = 0
                 output[coin.name] = val
                 await asyncio.sleep(0.5)
     return output

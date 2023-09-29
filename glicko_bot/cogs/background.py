@@ -286,13 +286,15 @@ class Background(commands.Cog):
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"*Note that updates of less than 0.5% are not shown*\nRates as of {str_time}:"
+                message = f"*Note that updates of less than 10% are not shown*\nRates as of {str_time}:"
                 embed = discord.Embed(title="Rate Update", color=0x00ff00, description=message)  # Green
                 for pr, r in zip(previous_rates.items(), rates.items()):
                     if pr[0] != "GLD":
-                        embed.add_field(name=pr[0], value=f"{pr[1]:.3f} -> {r[1]:.3f}", inline=True)
+                        if abs(pr[1] - r[1]) > 0.1*r[1]:
+                            embed.add_field(name=pr[0], value=f"{pr[1]:.3f} -> {r[1]:.3f}", inline=True)
 
-                await channel.send(embed=embed)
+                if embed.fields:
+                    await channel.send(embed=embed)
 
             else:
                 print(f"Channel '{self.channel_name}' not found in '{guild.name}'.")
