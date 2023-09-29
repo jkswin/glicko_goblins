@@ -7,7 +7,7 @@ RIOT PERSONAL API RATE LIMITS
 
 import aiohttp
 import asyncio
-from dotenv import dotenv_values
+from config import Auth
 import json
 import numpy as np
 from abc import ABC, abstractmethod
@@ -25,7 +25,6 @@ class Coin:
         self.headers = {}
         self.fetches = 0
         self.noise = noise
-        self.cfg = dotenv_values(".env") # grant the coin access to api keys
     
     async def fetch_data(self, url: str) -> dict:
             async with self.session.get(url, headers=self.headers) as response:
@@ -74,8 +73,8 @@ class RiotCoin(Coin):
                     "CHALLENGER":   33,
                 }
         self.queue_types = ["lol", "tft"]
-        self.header_options = {"lol":{"X-Riot-Token": self.cfg["RIOT_LOL_TOKEN"]},
-                                "tft":{"X-Riot-Token": self.cfg["RIOT_TFT_TOKEN"]},
+        self.header_options = {"lol":{"X-Riot-Token": Auth.RIOT_LOL_TOKEN},
+                                "tft":{"X-Riot-Token": Auth.RIOT_TFT_TOKEN},
                                 }
         self.challenger_endpoints = {"tft":"/tft/league/v1/challenger",
                                     "lol":"/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5",

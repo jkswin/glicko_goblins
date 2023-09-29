@@ -7,14 +7,12 @@ import asyncio
 import numpy as np
 from ..modules.currency import currency_query
 from ..modules.time import *
-from dotenv import dotenv_values
+from config import Auth
 import pandas as pd
 import os
 import shutil
 import pytz
 
-
-cfg = dotenv_values(".env")
 
 
 class Background(commands.Cog):
@@ -39,7 +37,6 @@ class Background(commands.Cog):
         self.user_path = "glicko_bot/data/users.json"
         self.kitty_path = "glicko_bot/data/kitty.json"
         self.archive_path = "glicko_bot/data/archive/"
-        #self.summoners = json.loads(cfg["SUMMONERS"])
         self.coin_config_path = "coin.cfg"
         self.tax = 0.02
 

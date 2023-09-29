@@ -15,13 +15,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
-from dotenv import dotenv_values
+from config import Auth
 import numpy as np
 import datetime
 from datetime import timedelta
 
 sns.set_theme()
-cfg = dotenv_values(".env")
 
 
 class Economy(commands.Cog):
@@ -56,11 +55,10 @@ class Economy(commands.Cog):
             # and 100 GLD
             users[user_id] = {"GLD": 100}
 
-            with open(self.config_path, "r") as f:
-                cfg = [json.loads(line) for line in f]
-
-            for coin_type, meta in cfg.items():
-                currency_name = meta["name"]
+        with open(self.coin_config_path, "r") as f:
+            for line in f:
+                line = json.loads(line)
+                currency_name = line["meta"]["name"]
                 users[user_id].update({currency_name:0})
 
             # save updated wallets
@@ -110,12 +108,11 @@ class Economy(commands.Cog):
         if user_id not in users:
             users[user_id] = {"GLD": 0}
 
-            with open(self.config_path, "r") as f:
-                cfg = [json.loads(line) for line in f]
-
-            for coin_type, meta in cfg.items():
-                currency_name = meta["name"]
-                users[user_id].update({currency_name:0})
+            with open(self.coin_config_path, "r") as f:
+                for line in f:
+                    line = json.loads(line)
+                    currency_name = line["meta"]["name"]
+                    users[user_id].update({currency_name:0})
                 
             with open(self.WALLET_PATH, "w") as f:
                 json.dump(users, f)

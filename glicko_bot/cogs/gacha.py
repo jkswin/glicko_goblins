@@ -4,10 +4,7 @@ import json
 import numpy as np
 from ..modules.pets import *
 from ..modules.time import *
-from dotenv import dotenv_values
-
-
-cfg = dotenv_values(".env")
+from config import Auth
 
 
 class GachaPets(commands.Cog):
