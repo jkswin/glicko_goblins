@@ -67,12 +67,6 @@ class Background(commands.Cog):
         self.tournament.run_day()
         self.tournament.save(self.tournament_path)
 
-        # alert the server that combats have happened
-        for guild in self.bot.guilds:
-            channel = discord.utils.get(guild.text_channels, name=self.channel_name)
-            if channel:
-                message = "Some tournament results are in!\nType !scout to see how they're doing!\n"
-                await channel.send(message)
 
         # load in the users' wallets
         with open(self.user_path, "r") as f:
@@ -144,7 +138,7 @@ class Background(commands.Cog):
                     total_round_tax += payout
 
         for manager, goblins in manager_results.items():
-            embed = discord.Embed(title=f"{manager}'s Roster")
+            embed = discord.Embed(title=f"{self.tournament.tournament_name}-{manager}'s Roster")
             for goblin in goblins:
                 embed_value = f"Round Payout:{goblin['payout']}\nCurrent Rank: {goblin['rank']}\nRound WL: {goblin['recent_winloss']}\n%Return:{goblin['percent_return']}\n%Total:{goblin['total_percent_return']}"
                 embed.add_field(name=goblin["name"], value=embed_value)
