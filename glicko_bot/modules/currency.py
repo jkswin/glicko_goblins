@@ -27,9 +27,12 @@ class Coin:
         self.noise = noise
     
     async def fetch_data(self, url: str) -> dict:
+        try:
             async with self.session.get(url, headers=self.headers) as response:
                 self.fetches += 1
                 return await response.json()
+        except aiohttp.ClientError:
+            return {}
 
     @staticmethod      
     def subtract(a,b):
@@ -39,10 +42,10 @@ class Coin:
         return max([b-a, 0])
     
     @staticmethod
-    def gaussian_noise(value):
+    def gaussian_noise(value,loc=1,scale=0.02):
         return np.random.normal(
-            loc=1,
-            scale=0.02
+            loc=loc,
+            scale=scale
         ) * value
     
     
@@ -214,7 +217,6 @@ class CoinBag(Coin):
     
     async def value(self):
         return np.mean([await coin.value() for coin in self.coins])
-    
 
 class DefaultList(list):
     def __init__(self, data=None, default_value=False):
@@ -309,5 +311,4 @@ async def currency_query(config_path):
                 await asyncio.sleep(0.5)
     return output
 
-if __name__ == "__main__":
-    asyncio.run(currency_query("coin.cfg"))
+
