@@ -71,7 +71,7 @@ class GachaPets(commands.Cog):
         pet.owner_id = str(ctx.author.name)
         current_pets = await pet_funcs.get_user_pets(ctx.author)
         n_current_pets = len(current_pets)
-        pet.id = len(n_current_pets) + 1
+        pet.id = n_current_pets + 1
         await pet_funcs.create_pet_entry(ctx.author, pet) 
         await ctx.send(f"Congratulations! {ctx.author.name} hatched a **{str(pet)}**!This creature has a Rarity of {pet.rarity}\nType !name {len(pets[user])-1} <NAME> to give it a name!")
 
