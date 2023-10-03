@@ -1,8 +1,5 @@
 """
 Initialise the shop! Users can spend gold to purchase items.
-
-TODO: It is currently a bad bad system that keeps everything in JSON and loops through the inventory to find things.
-    I will move this to an indexed format at some point but as a poc this works for now.
 """
 
 
@@ -13,6 +10,7 @@ import json
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
+from ..modules import user_funcs, server_funcs, art_funcs
 
 sns.set_theme()
 
@@ -22,10 +20,9 @@ class Shop(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.SHOP_PATH = "glicko_bot/data/art/"
-        self.WALLET_PATH = "glicko_bot/data/users.json"
-        self.KITTY_PATH = "glicko_bot/data/kitty.json"
 
     @commands.command()
+    @commands.guild_only()
     async def stock(self, ctx):
         """
         Display what is available to buy.
@@ -37,16 +34,16 @@ class Shop(commands.Cog):
                               description="Welcome to the shop. Only the finest artwork for sale!\nEverything is one of a kind!\nNO REFUNDS", 
                               color=0x674EA7
                               )
-        for collection in os.listdir(self.SHOP_PATH):
-            items = os.path.join(self.SHOP_PATH, collection, "metadata.jsonl")
-            with open(items, "r") as f:
-                inventory = [json.loads(item) for item in f.readlines()]
-                inv_str = "\n".join([f"_{item['name']} (UID: {item['uid']})_ - Price: {item['base_price']} GLD" for item in inventory if bool(item["for_sale"])])
-                embed.add_field(name=collection, value=inv_str, inline=False)
+        
+        stock = await art_funcs.list_stock()
+        for item in stock:
+            inv_str = f"Price: {item['base_price']} GLD"
+            embed.add_field(name=f"_{item['name']} (UID: {item['uid']})_", value=inv_str, inline=False)
 
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["art", "preview", "ap"])
+    @commands.guild_only()
     async def art_preview(self, ctx, 
                       uid: int = commands.parameter(description="The unique id of the art.", default=0),
                       ):
@@ -56,21 +53,25 @@ class Shop(commands.Cog):
         Example usage:
         !preview 2
         """
-        path = os.path.join(self.SHOP_PATH, "founding_collection/metadata.jsonl")
-        with open(path, "r") as f:
-            stock = [json.loads(a) for a in f.readlines()]
-
-        for item in stock:
-            if bool(item["for_sale"]):
-                if item["uid"] == uid:
-                    image_path = self.SHOP_PATH + f"founding_collection/{item['path']}"
-                    with open(image_path, "rb") as f:
-                        file = discord.File(f, image_path)
-                    await ctx.send(f"This is {item['name']}, available for the low price of only {item['base_price']} GLD.\nType _!buy {item['uid']}_ to buy it.", file=file)
-                    return
+        item = await art_funcs.get_art(uid)
+        if item is None:
+            await ctx.send(f"Item No. {uid} doesn't exist or isn't for sale.")
+            return
+        
+        image_path = self.SHOP_PATH + item["path"]
+        try: 
+            with open(image_path, "rb") as f:
+                file = discord.File(f, image_path)
+        except FileNotFoundError:
+            await ctx.send("I can't seem to find this piece...")
+            return 
+        
+        await ctx.send(f"This is {item['name']}, available for the low price of only {item['base_price']} GLD.\nType _!buy {item['uid']}_ to buy it.", file=file)
+        return
             
     
     @commands.command(aliases=["purchase"])
+    @commands.guild_only()
     async def buy(self, ctx, 
                       uid: int = commands.parameter(description="The unique id of the art.", default=0),
                       ):
@@ -80,56 +81,35 @@ class Shop(commands.Cog):
         Example usage:
         !buy 1
         """
-        path = os.path.join(self.SHOP_PATH, "founding_collection/metadata.jsonl")
-        with open(path, "r") as f:
-            stock = [json.loads(a) for a in f.readlines()]
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
 
-        user = str(ctx.author.id)
+        item = await art_funcs.get_art(uid, for_sale=True)
+        if item is None:
+            await ctx.send("I can't find that item in my stock?")
+            return 
+        
+        owner = item.get("owner", None)
+        name = item.get("name", "")
+        price = item.get('base_price', 0)
 
-        if user not in users.keys():
-            await ctx.send("How can you buy stuff without a wallet?!")
+        wallet = await user_funcs.get_user_wallet(ctx.author)
+        funds = wallet.get("GLD", 0)
+
+        if funds < price:
+            await ctx.send(f"You don't have enough GLD to buy {name} for {price} GLD!")
             return
         
-        for art in stock:
-            if art.get("uid", False) == uid:
-                owner = art.get("owner", "")
-                for_sale = art.get("for_sale", 0)
-                name = art.get("name", "")
-                if bool(for_sale):
-                    price = art.get('base_price', 0)
-                    funds = users[user].get("GLD")
-                    if funds < price:
-                        await ctx.send(f"You don't have enough GLD to buy {name} for {price} GLD!")
-                    else:
-                        users[user]["GLD"] -= price
-                        if owner != "":
-                            owner_id = discord.utils.get(self.bot.users, name=owner).id
-                            users[str(owner_id)]["GLD"] += price
 
-                        art["owner"] = ctx.message.author.name
-                        art["for_sale"] = 0
-                        art["sale_history"].append({"from":owner, "to": ctx.message.author.name, "price": price})
+        await user_funcs.update_wallet(ctx.author, "GLD", -price)
+        if owner is not None:
+            owner = discord.utils.get(self.bot.users, name=owner)
+            await user_funcs.update_wallet(owner, "GLD", price)
 
-                        await ctx.send(f"@everyone {ctx.message.author.name} bought {name} for {price} GLD.")
-                        with open(path, "w") as f:
-                            for a in stock:
-                                json.dump(a, f) 
-                                f.write("\n")
+        await art_funcs.change_hands(uid, owner, ctx.author, price)
 
-                        with open(self.WALLET_PATH, "w") as f:
-                            json.dump(users, f)
-                        
-                    return
-                
-                else:
-                    await ctx.send(f"This art is already owned by {owner}!")
-                    return
-                
-        await ctx.send(f"I don't seem to have that registered?")
-        return
+        await ctx.send(f"@everyone {ctx.message.author.name} bought {name} for {price} GLD.")
+            
     
+    @commands.guild_only()
     @commands.cooldown(1, 30, BucketType.user)
     @commands.command()
     async def sell(self, ctx, uid: int = commands.parameter(description="The unique id of the art.", default=0), price: float = commands.parameter(description="The price in GLD.", default=1000)):
@@ -139,39 +119,20 @@ class Shop(commands.Cog):
         Example usage:
         !sell 3 1700
         """
-        path = os.path.join(self.SHOP_PATH, "founding_collection/metadata.jsonl")
-        with open(path, "r") as f:
-            stock = [json.loads(a) for a in f.readlines()]
-
-        with open(self.KITTY_PATH, "r") as f:
-            tax_pool = json.load(f)["tax"]
-
+        tax_pool = await server_funcs.get_tax()
         if price >= tax_pool:
             await ctx.send(f"I think that's a bit unreasonable... Try something less than {tax_pool:,.4f}")
             return 
         
-        for art in stock:
-            if art.get("uid", False) == uid:
-                owner = art.get("owner", "")
-                if owner == ctx.message.author.name:
-                    previous_price = art["base_price"]
-                    for_sale = art.get("for_sale", 0)
-                    art["base_price"] = price
-                    art["for_sale"] = 1
+        art = await art_funcs.list_art(ctx.author, uid, price)
+        if art is None:
+            await ctx.send(f"It doesn't look like you own artwork with that ID.")
+            return
 
-                    if not bool(for_sale):
-                        await ctx.send(f"{ctx.message.author.name} listed {art['name']} for {price:,} GLD.\n Buy it while you can!")
-                    else:
-                        await ctx.send(f"{ctx.message.author.name} re-listed {art['name']} for {price:,} GLD.\nPreviously it was {previous_price:,}")
-                    
-                    with open(path, "w") as f:
-                        for a in stock:
-                            json.dump(a, f) 
-                            f.write("\n")
-
-                else:
-                    await ctx.send(f"You don't own {art['name']}")
-                    return
+        if not art.get("for_sale"):
+            await ctx.send(f"{ctx.message.author.name} listed {art['name']} for {price:,} GLD.\n Buy it while you can!")
+        else:
+            await ctx.send(f"{ctx.message.author.name} re-listed {art['name']} for {price:,} GLD.\nPreviously it was {art.get('base_price'):,}")
     
 
     @commands.command()
@@ -186,24 +147,22 @@ class Shop(commands.Cog):
         !collection 1
         """
         
-        path = os.path.join(self.SHOP_PATH, "founding_collection/metadata.jsonl")
-        with open(path, "r") as f:
-            stock = [json.loads(a) for a in f.readlines()]
-
         title = f"{ctx.author.name}'s collection:"
         await ctx.send(title)
+        user_collection = await art_funcs.show_off(ctx.author)
         if bool(show):
-            for item in stock:
-                if item["owner"] == ctx.author.name:
-                    image_path = self.SHOP_PATH + f"founding_collection/{item['path']}"
+            for item in user_collection:
+                try:
+                    image_path = self.SHOP_PATH + {item["path"]}
                     with open(image_path, "rb") as f:
                         file = discord.File(f, image_path)
                     await ctx.send(f"{item['name']} (UID: {item['uid']})", file=file)
+                except FileNotFoundError:
+                    await ctx.send(f"{item['name']} couldn't be found.")
         else:
             embed = discord.Embed(title=title, color=0xE65AD8)
-            for item in stock:
-                if item["owner"] == ctx.author.name:
-                    embed.add_field(name=f"__{item['name']}__", value=f"(UID: {item['uid']})")
+            for item in user_collection:
+                embed.add_field(name=f"__{item['name']}__", value=f"(UID: {item['uid']})")
             await ctx.send(embed=embed)
 
 async def setup(bot: commands.bot):

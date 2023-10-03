@@ -1,17 +1,14 @@
 import discord
 from discord.ext import commands, tasks
-import json
 import datetime
 from glicko_goblins.combat import Tournament
 import asyncio
 import numpy as np
 from ..modules.currency import currency_query
 from ..modules.time import *
+from ..modules import exchange_funcs, user_funcs, server_funcs
 from config import Auth
 import pandas as pd
-import os
-import shutil
-import pytz
 
 
 
@@ -25,18 +22,12 @@ class Background(commands.Cog):
 
         self.update_exchange_rate.start()
         self.init_tournament.start()
-        self.backup_data.start()
         self.run_tournament.start()
         self.credit.start()
 
         self.tournament = None
         self.accepting_sponsors = True
         self.tournament_path = "glicko_goblins/data/tournament.pkl"
-        self.exchange_path = "glicko_bot/data/exchange.json"
-        self.history_path = "glicko_bot/data/exchange_history.json"
-        self.user_path = "glicko_bot/data/users.json"
-        self.kitty_path = "glicko_bot/data/kitty.json"
-        self.archive_path = "glicko_bot/data/archive/"
         self.coin_config_path = "coin.cfg"
         self.tax = 0.02
 
@@ -44,7 +35,6 @@ class Background(commands.Cog):
         self.update_exchange_rate.cancel()
         self.init_tournament.cancel()
         self.run_tournament.cancel()
-        self.backup_data.cancel()
         self.credit.cancel()
 
     @tasks.loop(time=tourn_times)
@@ -67,23 +57,10 @@ class Background(commands.Cog):
         self.tournament.run_day()
         self.tournament.save(self.tournament_path)
 
-
-        # load in the users' wallets
-        with open(self.user_path, "r") as f:
-            users = json.load(f)
-
-        # load in the tax pot
-        with open(self.kitty_path, "r") as f:
-            kitty = json.load(f)
-
         # convert the current tournament state to a dataframe for easy sorting
         tournament_table = pd.DataFrame(self.tournament.fighter_info()).sort_values("mean_outcome", ascending=False)
         # sort the tournament participants by ranking. (ranking by glicko isn't strictly sound, but does the job here)
         rankings = tournament_table["tourn_id"].tolist()
-
-        # prepare the output string and a var for tracking the tax
-        output = "\n"
-        total_round_tax = 0
         
         manager_results = {}
         # loop through all the fighters
@@ -101,41 +78,29 @@ class Background(commands.Cog):
             goblin.earnings += payout
             
             if goblin.manager != None:
-                tax = pre_payout - payout
-                kitty["tax"] += tax
-                total_round_tax += tax
+                tax_taken = pre_payout - payout
+                await server_funcs.update_tax(tax_taken)
                 # add the amount earned by their sponsored golbins to the users wallets
-                manager_id = str(discord.utils.get(self.bot.users, name=goblin.manager).id)
-                if manager_id in users.keys():
-                    users[manager_id]["GLD"] += payout
-                    perc_return = 100*payout/goblin.funding
-                    total_perc_return = 100 * goblin.earnings/goblin.funding
-                    # add each users' returns to the output string
-                    info_dict = {
-                            "name": goblin.name,
-                            "payout": payout,
-                            "rank": position + 1,
-                            "recent_winloss": goblin.recent_winloss,
-                            "percent_return": int(perc_return), 
-                            "total_percent_return": int(total_perc_return),
-                        }
-                    if goblin.manager not in manager_results.keys():
-                        manager_results[goblin.manager] = []
-                        
-                    manager_results[goblin.manager].append(info_dict)
-                    
+                manager = discord.utils.get(self.bot.users, name=goblin.manager)
+                await user_funcs.update_wallet(manager, "GLD", payout)
+
+                perc_return = 100*payout/goblin.funding
+                total_perc_return = 100 * goblin.earnings/goblin.funding
+                # add each users' returns to the output string
+                info_dict = {
+                        "name": goblin.name,
+                        "payout": payout,
+                        "rank": position + 1,
+                        "recent_winloss": goblin.recent_winloss,
+                        "percent_return": int(perc_return), 
+                        "total_percent_return": int(total_perc_return),
+                    }
                 
-                
-                else:
-                    # if a manager no longer has a wallet, put their earnings into the tax pot
-                    # add this to message
-                    for guild in self.bot.guilds:
-                        channel = discord.utils.get(guild.text_channels, name=self.channel_name)
-                        if channel:
-                            await channel.send(f"@{goblin.manager} doesn't have a wallet and so {goblin.name}'s earnings were transferred to the state.\n\n")
+                if goblin.manager not in manager_results.keys():
+                    manager_results[goblin.manager] = []
                     
-                    kitty["tax"] += payout
-                    total_round_tax += payout
+                manager_results[goblin.manager].append(info_dict)
+
 
         for manager, goblins in manager_results.items():
             embed = discord.Embed(title=f"{self.tournament.tournament_name}-{manager}'s Roster")
@@ -151,20 +116,7 @@ class Background(commands.Cog):
         # save the updated tournament (goblin earnings were added to each goblin)
         self.tournament.save(self.tournament_path)
 
-        # save updated user wallets and tax pot
-        with open(self.user_path, "w") as f:
-            json.dump(users, f)
 
-        with open(self.kitty_path, "w") as f:
-            json.dump(kitty, f)
-
-        # send the message to alert people of their returns
-        if output != "\n":
-            for guild in self.bot.guilds:
-                channel = discord.utils.get(guild.text_channels, name=self.channel_name)
-                if channel:
-                    await channel.send(f"\n{total_round_tax:,.2f} GLD was paid to the state in Tournament fairs.")
-                
     @tasks.loop(time=start_time)
     async def init_tournament(self):
         """
@@ -185,9 +137,7 @@ class Background(commands.Cog):
                                         daily_mortalities=10,
                                         )
         
-        # load in the tax pool and increase the amount of base funding goblins have 
-        with open(self.kitty_path, "r") as f:
-            tax = json.load(f)["tax"]
+        tax = await server_funcs.get_tax()
 
         for fighter in self.tournament.fighters:
             fighter.funding += int(tax**(5/9))
@@ -229,57 +179,18 @@ class Background(commands.Cog):
         Logic for updating exchange rates, adjusting user wallets to handle new currencies 
         and recording exchange rate history.
         """
-        # load in the current rates and make a copy
-        with open(self.exchange_path, "r") as f:
-            rates = json.load(f)
-            previous_rates = rates.copy()
 
+        previous_rates = await exchange_funcs.get_current_rate()
         new_rates = await currency_query(self.coin_config_path)
-        rates.update(new_rates)
+        await exchange_funcs.update_exchange_rate(new_rates)
 
-        # now check if any of the users don't have a wallet slot for new currencies
-        with open(self.user_path, "r") as f:
-            users = json.load(f)
-
-        # if they don't, add it as an option to their wallet
-        for user in users.keys():
-            for currency in rates.keys():
-                if currency not in users[user].keys():
-                    users[user][currency] = 0
-
-        # save the users' wallets
-        with open(self.user_path, "w") as f:
-            json.dump(users,f)
-
-        # make a record of the update
-        str_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        with open("rate_update.log", "a") as f:
-            f.write(f"{str_time}\nNew Rates before circulation adjustment:{previous_rates}\nUpdated rates: {rates}\n\n\n")
-        
-        # save the new exchange rates
-        with open(self.exchange_path, "w") as f:
-            json.dump(rates, f)
-        
-        # load in and save the timestamped exchange rates to the rate history
-        with open(self.history_path, "r") as f:
-            history = json.load(f)
-            history[str_time] = rates
-
-        with open(self.history_path, "w") as f:
-            json.dump(history, f)
-
-        # suppress posting rating updates if there isn't a change of more than 0.5% anywhere
-        if all([np.absolute(new_rates[curr] - previous_rates.get(curr, 0)) < previous_rates.get(curr, 0)/200 
-                for curr in new_rates.keys()]):
-            return
-
-        # otherwise send a server message notifying of updated rates
+        # send a server message notifying of updated rates
         for guild in self.bot.guilds:
             channel = discord.utils.get(guild.text_channels, name=self.channel_name)
             if channel:
-                message = f"*Note that updates of less than 10% are not shown*\nRates as of {str_time}:"
+                message = f"*Note that updates of less than 10% are not shown*"
                 embed = discord.Embed(title="Rate Update", color=0x00ff00, description=message)  # Green
-                for pr, r in zip(previous_rates.items(), rates.items()):
+                for pr, r in zip(previous_rates.items(), new_rates.items()):
                     if pr[0] != "GLD":
                         if abs(pr[1] - r[1]) > 0.1*r[1]:
                             embed.add_field(name=pr[0], value=f"{pr[1]:.3f} -> {r[1]:.3f}", inline=True)
@@ -287,38 +198,6 @@ class Background(commands.Cog):
                 if embed.fields:
                     await channel.send(embed=embed)
 
-            else:
-                print(f"Channel '{self.channel_name}' not found in '{guild.name}'.")
-
-    @tasks.loop(time=backup_times)
-    async def backup_data(self):
-        """
-        Make a backup of the data directory 
-        """
-        source_directory = 'glicko_bot/data'
-        backup_directory = 'glicko_bot/backup'
-        
-        # Remove the existing backup directory if it exists
-        if os.path.exists(backup_directory):
-            shutil.rmtree(backup_directory)
-        
-        # Create the backup directory
-        os.makedirs(backup_directory)
-        
-        # Loop through the contents of the source directory
-        for item in os.listdir(source_directory):
-            source_item = os.path.join(source_directory, item)
-            backup_item = os.path.join(backup_directory, item)
-            
-            # If the item is a directory, use shutil.copytree to copy the entire directory
-            if os.path.isdir(source_item):
-                shutil.copytree(source_item, backup_item)
-
-            # If the item is a file, use shutil.copy2 to copy the file with metadata
-            elif os.path.isfile(source_item):
-                shutil.copy2(source_item, backup_item)
-        
-        print("Backup completed.")
 
     @tasks.loop(time=credit_times)
     async def credit(self):
@@ -327,33 +206,23 @@ class Background(commands.Cog):
         Users without much money get a much larger proportion.
         """
 
-        # read in users' wallets and the tax pot
-        with open(self.user_path, "r") as f, open(self.kitty_path, "r") as f2:
-            users = json.load(f)
-            tax_pool = json.load(f2)
-        
-        # calculate their current gold worth
-        user_golds = {user:self.wallet_to_gold(g) for user, g in users.items()}
-        # calculate 0.5% of the tax pool
-        total_credit = tax_pool["tax"]//200
-        # calculate the total amount of money in circulation
+        tax_pool = await server_funcs.get_tax()
+        wallets = await user_funcs.get_all_wallets()
+        exchange_rates = await exchange_funcs.get_current_rate()
+
+        user_golds = {user:self.wallet_to_gold(g, exchange_rates) for user, g in wallets.items()}
+        total_credit = tax_pool//200
         users_total = sum(user_golds.values())
+
         # for each user, give them a proportion of the tax based on their relative proportion of all gold in existence.
-        payouts = {k:((1-(v/users_total))**len(users.keys()))*total_credit for k,v in user_golds.items()}
-        
-        # update each user's gold
-        for user in payouts:
-            users[user]["GLD"] += payouts[user]
+        payouts = {k:((1-(v/users_total))**len(wallets.keys()))*total_credit for k,v in user_golds.items()}
+   
+        for user_id in payouts:
+            member = self.bot.get_user(user_id)
+            await user_funcs.update_wallet(member, "GLD", payouts[user_id])
         
         # update the tax pool
-        tax_pool["tax"] -= total_credit
-
-        # save the updates 
-        with open(self.user_path, "w") as f:
-            json.dump(users, f)
-           
-        with open(self.kitty_path, "w") as f:
-            json.dump(tax_pool, f)
+        await server_funcs.update_tax(-total_credit)
 
         # alert the server that everyone has been given credit
         for guild in self.bot.guilds:
@@ -362,18 +231,11 @@ class Background(commands.Cog):
                 message = f"@everyone Credit has been distributed. Check your wallets!"
                 await channel.send(message)
 
-    def load_exchange_data(self):
-            """
-            Helper function to bypass context manager format.
-            """
-            with open(self.exchange_path, "r") as exchange_file:
-                return json.load(exchange_file)   
 
-    def wallet_to_gold(self, wallet: json) -> float:
+    def wallet_to_gold(self, wallet: dict, exchange_rates: dict) -> float:
         """
         Takes a wallet, converts its contents to GLD and returns the value.
         """
-        exchange_rates = self.load_exchange_data()
         gold = 0
         for currency, quantity in wallet.items():
             gold += quantity * exchange_rates.get(currency, 0)
@@ -383,7 +245,6 @@ class Background(commands.Cog):
     @init_tournament.before_loop
     @run_tournament.before_loop
     @update_exchange_rate.before_loop
-    @backup_data.before_loop
     async def before_background_task(self):
         await self.bot.wait_until_ready()
 

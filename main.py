@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import logging
 from config import Auth
 import os
-#from glicko_bot.modules import mongo
+from glicko_bot.modules import mongo, user_funcs, server_funcs, pet_funcs, exchange_funcs, art_funcs
 
 
 # initialise logging
@@ -24,7 +24,7 @@ class GobboBot(commands.Bot):
     accepting_sponsors = False
 
 # bot goooooo
-bot = GobboBot(command_prefix="!", intents=intents, description=description)
+bot = GobboBot(command_prefix=Auth.COMMAND_PREFIX, intents=intents, description=description)
 
 
 @bot.event
@@ -39,13 +39,18 @@ async def on_ready():
                 print(f"- {filename} ❌ ")
                 print(e)
 
-    #await mongo.DB.connect()
-    #if not mongo.DB.is_connected:
-    #    raise RuntimeError("Database access denied")
+    await mongo.DB.connect()
+    if not mongo.DB.is_connected:
+        raise RuntimeError("Database access denied")
 
-    #await bank_funcs.create_table()
-    #await inventory_funcs.create_table()
-    #print("Created/modified tables successfully")
+    await user_funcs.create_table()
+    await server_funcs.create_table()
+    await pet_funcs.create_table()
+    await exchange_funcs.create_table()
+    await art_funcs.create_table()
+    print("Created/modified tables successfully")
+
+    #await bot.guilds ## create_text_channel(channel_name)
 
 if __name__ == "__main__":
     bot.run(Auth.DISCORD_TOKEN, 

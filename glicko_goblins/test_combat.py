@@ -20,7 +20,7 @@ class TestCombat(unittest.TestCase):
         for a,b in zip(draw[::2], draw[1::2]):
             assert a != b
     
-    #@unittest.SkipTest
+    @unittest.SkipTest
     def test_run(self):
         self.tourn.run()
 

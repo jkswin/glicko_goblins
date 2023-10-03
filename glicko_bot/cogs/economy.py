@@ -11,14 +11,13 @@ import json
 import random
 import os
 import pandas as pd
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 from config import Auth
 import numpy as np
-import datetime
-from datetime import timedelta
+from ..modules.mongo import *
+from ..modules import user_funcs, server_funcs, exchange_funcs
 
 sns.set_theme()
 
@@ -27,14 +26,8 @@ class Economy(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.WALLET_PATH = "glicko_bot/data/users.json"
-        self.EXCHANGE_PATH = "glicko_bot/data/exchange.json"
-        self.HISTORY_PATH = "glicko_bot/data/exchange_history.json"
-        self.KITTY_PATH = "glicko_bot/data/kitty.json"
-        self.ART_PATH = "glicko_bot/data/art/founding_collection/metadata.jsonl"
-        self.SCRATCH_HISTORY_PATH = "glicko_bot/data/scratch_history.json"
         self.coin_config_path = "coin.cfg"
-        self.tax = 0.02
+        self.tax_rate = 0.02
         self.channel_name = "general"
 
     @commands.Cog.listener()
@@ -42,30 +35,10 @@ class Economy(commands.Cog):
         """
         Give a wallet to new members containing 100 GLD.
         """
-        # get unique user id
-        user_id = str(member.id)
-
-        # read in current list of users' wallets
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
-        
-        # check so that you can't abuse leave + join to generate money
-        if user_id not in users:
-            # give them a wallet with all possible currencies at 0
-            # and 100 GLD
-            users[user_id] = {"GLD": 100}
-
-        with open(self.coin_config_path, "r") as f:
-            for line in f:
-                line = json.loads(line)
-                currency_name = line["meta"]["name"]
-                users[user_id].update({currency_name:0})
-
-            # save updated wallets
-            with open(self.WALLET_PATH, "w") as f:
-                json.dump(users, f)
+        await user_funcs.create_user_wallet(member)
 
     @commands.command(aliases=["b"])
+    @commands.guild_only()
     async def balance(self, ctx):
         """
         Display your balance of each currency.
@@ -73,55 +46,18 @@ class Economy(commands.Cog):
         Example usage:
         !balance
         """
+        wallet = await user_funcs.get_user_wallet(ctx.author)
 
-        # read in wallets
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
-
-        # get the message sender's unique id to match it to their wallet 
-        user = str(ctx.author.id)
-        if user in users:
+        if wallet:
             # send user's wallet contents 
             embed = discord.Embed(title=f"{ctx.author}'s Balance\n(Values rounded to 4DP)", color=0xcc0000) 
-            for currency, amount in users[user].items():
+            for currency, amount in wallet.items():
                 embed.add_field(name=currency, value=f"{amount:,.4f}", inline=True)
             await ctx.send(embed=embed)
 
-        else:
-            # notify if they don't have a wallet
-            await ctx.send(f"You don't have a wallet yet! Try {ctx.prefix}create_wallet")
-
-    @commands.cooldown(1, 300, BucketType.user)
-    @commands.command(aliases=["cw"])
-    async def create_wallet(self, ctx):
-        """
-        If you somehow end up without a wallet, get a new one...
-        5 Minute Cooldown
-
-        Example usage:
-        !create_wallet
-        """
-
-        user_id = str(ctx.author.id)
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
-        if user_id not in users:
-            users[user_id] = {"GLD": 0}
-
-            with open(self.coin_config_path, "r") as f:
-                for line in f:
-                    line = json.loads(line)
-                    currency_name = line["meta"]["name"]
-                    users[user_id].update({currency_name:0})
-                
-            with open(self.WALLET_PATH, "w") as f:
-                json.dump(users, f)
-            await ctx.send("Wallet created successfully!")
-        else:
-            await ctx.send("You already have a wallet.")
-
     @commands.cooldown(1,60, BucketType.user)
     @commands.command()
+    @commands.guild_only()
     async def steal(self, ctx):
         """
         Try steal gold. Don't get caught...
@@ -137,38 +73,26 @@ class Economy(commands.Cog):
             probabilities /= probabilities.sum()
             return int(np.random.choice(np.arange(lower_bound,upper_bound+1), size=size, p=probabilities))
 
-        user_id = str(ctx.author.id)
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
-        if user_id in users:
+        wallet = await user_funcs.get_user_wallet(ctx.author)
+        if wallet:
             success = bool(random.randint(0,1))
-            with open(self.KITTY_PATH, "r") as f:
-                    kitty = json.load(f)
-            if success and kitty["tax"] > 10:
-                # calculate steal amount
-                amount = steal_calc(kitty["tax"], users[user_id]["GLD"], size=1)
-                kitty["tax"] -= amount
-                users[user_id]["GLD"] += amount
-                with open(self.WALLET_PATH, "w") as f:
-                    json.dump(users, f)
-                await ctx.send(f"{ctx.author} stole {amount} GLD from a passerby!")
+            tax = await server_funcs.get_tax()
+            if success and tax > 10:
+                amount = steal_calc(tax, wallet.get("GLD", 0), size=1)
+                await server_funcs.update_tax(-amount)
+                await user_funcs.update_wallet(ctx.author, "GLD", amount)
+                await ctx.send(f"{ctx.author} stole {amount} GLD!")
 
             else:
-                gold_in_wallet = self.wallet_to_gold(users[str(user_id)])
-                del users[user_id]
-                with open(self.WALLET_PATH, "w") as f:
-                    json.dump(users, f)
-                kitty["tax"] += gold_in_wallet
+                exchange_rates = await exchange_funcs.get_current_rate()
+                gold_in_wallet = self.wallet_to_gold(ctx.author, exchange_rates)
+                await server_funcs.update_tax(gold_in_wallet)
+                await user_funcs.reset_user_wallet(ctx.author)
+                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")            
 
-                await ctx.send(f"{ctx.author} was arrested!\nTheir dirty money was seized by the state.")
-
-            with open(self.KITTY_PATH, "w") as f:
-                    json.dump(kitty, f)    
-            
-        else:
-            await ctx.send("You don't have a wallet to add money to!")
 
     @commands.command(aliases=["gg"])
+    @commands.guild_only()
     async def give_gold(self, ctx, 
                         amount: float = commands.parameter(description="The amount of gold to send."), 
                         member: discord.Member = commands.parameter(description="The username of the person to send it to.")):
@@ -182,33 +106,25 @@ class Economy(commands.Cog):
             await ctx.send("Invalid amount.")
             return
         
-        user = str(ctx.author.id)
-        target_user = str(member.id)
-
-        if user == target_user:
+        if ctx.author == member:
             await ctx.send("You can't send money to yourself!")
             return
 
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
+        giver_wallet = await user_funcs.get_user_wallet(ctx.author)
+        receiver_wallet = await user_funcs.get_user_wallet(member)
 
-        if user in users and target_user in users:
-            if users[user]["GLD"] >= amount:
-                users[user]["GLD"] -= amount
-                users[target_user]["GLD"] += amount
-                with open(self.WALLET_PATH, "w") as f:
-                    json.dump(users, f)
+        if giver_wallet and receiver_wallet:
+            if giver_wallet.get("GLD", 0) >= amount:
+                await user_funcs.update_wallet(ctx.author, "GLD", -amount)
+                await user_funcs.update_wallet(member, "GLD", amount)
                 await ctx.send(f"Transferred {amount} GLD to {member.mention}")
             else:
                 await ctx.send("You don't have enough GLD.")
         else:
-            await ctx.send("Invalid users.")
-
-    def load_exchange_data(self):
-            with open(self.EXCHANGE_PATH, "r") as exchange_file:
-                return json.load(exchange_file)    
+            await ctx.send("Invalid users.")  
 
     @commands.command(aliases=["ex"])
+    @commands.guild_only()
     async def exchange(self, ctx, 
                        amount: float = commands.parameter(description="The quantity to exchange."), 
                        from_currency: str = commands.parameter(description="The currency to sell."), 
@@ -220,11 +136,7 @@ class Economy(commands.Cog):
         !exchange 10 GLD SRC
         """
 
-        user_id = str(ctx.author.id)
-        exchange_data = self.load_exchange_data()
-
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
+        exchange_data = await exchange_funcs.get_current_rate()
 
         if from_currency in exchange_data and to_currency in exchange_data:
             from_rate = exchange_data[from_currency]
@@ -233,39 +145,31 @@ class Economy(commands.Cog):
             if from_currency == to_currency:
                 await ctx.send("Cannot exchange between the same currencies.")
             else:
-                if user_id in users:
-                    from_balance = users[user_id][from_currency]
+                wallet = await user_funcs.get_user_wallet(ctx.author)
+                from_balance = wallet.get(from_currency, 0)
+            
+                if from_balance >= amount:
+                    exchanged_amount = amount * (from_rate/to_rate)
+                    await user_funcs.update_wallet(ctx.author, from_currency, -amount)
+                    after_vat = exchanged_amount * (1 - self.tax_rate)
+                    await user_funcs.update_wallet(ctx.author, to_currency, after_vat)
 
-                    if from_balance >= amount:
-                        exchanged_amount = amount * (from_rate/to_rate)
-                        users[user_id][from_currency] -= amount 
-                        after_vat = exchanged_amount * (1 - self.tax)
-                        users[user_id][to_currency] += after_vat
+                    tax_taken = exchanged_amount - after_vat
+                    tax_in_gold = tax_taken * to_rate
 
-                        tax_taken = exchanged_amount - after_vat
-                        tax_in_gold = tax_taken * to_rate
+                    await user_funcs.exchange_log(ctx.author, to_currency, from_currency, amount, from_rate/to_rate)
 
-                        with open(self.WALLET_PATH, "w") as f:
-                            json.dump(users, f)
-
-                        # add tax to the kitty
-                        with open(self.KITTY_PATH, "r") as f:
-                            kitty = json.load(f)
-
-                        kitty["tax"] += tax_in_gold
-
-                        with open(self.KITTY_PATH, "w") as f:
-                            json.dump(kitty, f)
-
-                        await ctx.send(f"Successfully exchanged **{amount:,} {from_currency}** to **{after_vat:,.4f} {to_currency}**\nat a rate of roughly {from_rate/to_rate:,.4f}\n(Tax Paid: {exchanged_amount - after_vat:,.4f} {to_currency} or {tax_in_gold:,.4f} GLD). ")
-                    else:
-                        await ctx.send(f"You don't have enough {from_currency} to perform this exchange.")
+                    await server_funcs.update_tax(tax_in_gold)
+                    await ctx.send(f"Successfully exchanged **{amount:,} {from_currency}** to **{after_vat:,.4f} {to_currency}**\nat a rate of roughly {from_rate/to_rate:,.4f}\n(Tax Paid: {exchanged_amount - after_vat:,.4f} {to_currency} or {tax_in_gold:,.4f} GLD). ")
+                
                 else:
-                    await ctx.send("Invalid or unsupported currency.")
+                    await ctx.send(f"You don't have enough {from_currency} to perform this exchange.")
         else:
             await ctx.send("Invalid or unsupported currencies.")
 
+
     @commands.command(aliases=["er"])
+    @commands.guild_only()
     async def exchange_rate(self, ctx):
         """
         Display the current exchange rates!
@@ -273,15 +177,16 @@ class Economy(commands.Cog):
         Example usage:
         !exchange_rate
         """
-        exchange_data = self.load_exchange_data()
-        message = f"The current exchange rates are:"
-        embed = discord.Embed(title="Hourly Rate Update", color=0x00ff00, description=message)  # Green
-        for c, r in exchange_data.items():
-            embed.add_field(name=c, value=f"{r:,.3f},", inline=True)
+        exchange_data = await exchange_funcs.get_current_rate()
+        if exchange_data:
+            embed = discord.Embed(title="Exchange Rates", color=0x00ff00)  # Green
+            for c, r in exchange_data.items():
+                embed.add_field(name=c, value=f"{r:,.3f},", inline=True)
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
     @commands.command(aliases=["rh", "history"])
+    @commands.guild_only()
     async def rate_history(self, ctx, currency: str = commands.parameter(description="Display only a specified currency", default=""), n_days: int = commands.parameter(description="The number of days to display.", default=7)):
         """
         Display a graph of currency values over time.
@@ -293,17 +198,20 @@ class Economy(commands.Cog):
         !rate_history GRC 1
         """
 
-        if n_days > 7:
-            await ctx.send("I can only show you the within the last 7 days!")
+        if n_days > 31:
+            await ctx.send("I can only show you the within the last 31 days!")
             return
         elif n_days < 1:
             await ctx.send("That makes no sense...")
             return
         
-        df = pd.read_json(self.HISTORY_PATH).T
-        today = datetime.datetime.today()
-        ago = today - datetime.timedelta(days=n_days)
-        df = df.loc[df.index > ago]
+        data = await exchange_funcs.get_last_n_days(n_days)
+        df = pd.DataFrame(data)
+        if not df:
+            return
+        
+        df.set_index("timestamp",inplace=True)
+        df.drop(["_id"], axis=1, inplace=True)
 
         if currency in df.columns:
             df = df[[currency]]
@@ -327,6 +235,7 @@ class Economy(commands.Cog):
         plt.close()
 
     @commands.command(aliases=["wealthy"])
+    @commands.guild_only()
     async def richest(self, ctx):
         """
         Display the richest person in the server keeping indentity private.
@@ -335,17 +244,18 @@ class Economy(commands.Cog):
         !richest
         """
         max_gold = 0
-        with open(self.WALLET_PATH, "r") as f:
-            wallets = json.load(f)
-        for user, wallet in wallets.items():
-            gold = self.wallet_to_gold(wallet)
-            
+        wallets = await user_funcs.get_all_wallets()
+        exchange_rates = await exchange_funcs.get_current_rate()
+        for wallet in wallets:
+            wallet = wallet.get("wallet", {})
+            gold = self.wallet_to_gold(wallet, exchange_rates) 
             if gold > max_gold:
                 max_gold = gold
         
         await ctx.send(f"The richest member currently has a total worth of {max_gold:,.3f} GLD!")
     
     @commands.command()
+    @commands.guild_only()
     async def tax(self, ctx):
         """
         Display how much tax has been collected so far.
@@ -354,16 +264,14 @@ class Economy(commands.Cog):
         Example usage:
         !tax
         """
-        with open(self.KITTY_PATH, "r") as f:
-            kitty = json.load(f)
-        await ctx.send(f"Current Tax pool: {kitty['tax']:,.3f} GLD!")
+        tax = await server_funcs.get_tax()
+        await ctx.send(f"Current Tax pool: {tax:,.3f} GLD!")
         
 
-    def wallet_to_gold(self, wallet: json) -> float:
+    def wallet_to_gold(self, wallet: dict, exchange_rates: dict) -> float:
         """
         Takes a wallet, converts its contents to GLD and returns the value.
         """
-        exchange_rates = self.load_exchange_data()
         gold = 0
         for currency, quantity in wallet.items():
             gold += quantity * exchange_rates.get(currency, 0)
@@ -371,6 +279,7 @@ class Economy(commands.Cog):
     
 
     @commands.command(aliases=["scratch_card", "sc"])
+    @commands.guild_only()
     async def scratch(self, ctx):
         """
         Pay 100 GLD to buy a scratch card. Match 4 icons to win GLD!
@@ -395,21 +304,17 @@ class Economy(commands.Cog):
         }
         
 
-        user_id = str(ctx.author.id)
-
-        with open(self.WALLET_PATH, "r") as f:
-            users = json.load(f)
-
-        if user_id in users:
-            if users[user_id]["GLD"] < cost:
+        wallet = await user_funcs.get_user_wallet(ctx.author)
+        if wallet:
+            if wallet.get("GLD", 0) < cost:
                 await ctx.send(f"With that much gold shouldn't you be looking at better ways of earning money...")
                 return 
             
-            with open(self.KITTY_PATH, "r") as f:
-                kitty = json.load(f)
+            await server_funcs.update_tax(cost)
+            await user_funcs.update_wallet(ctx.author, "GLD", -cost)
 
-            kitty["tax"] += cost
-            users[user_id]["GLD"] -= cost
+            tax = await server_funcs.get_tax()
+
             ####
             outcome = random.choices([0,1,2,3,4], weights=prize_model["probabilities"])[0]
             prize = prize_model["prizes"][outcome]
@@ -432,28 +337,13 @@ class Economy(commands.Cog):
             scratch_card = "\n".join([" ".join(scratch_card[i:i+4]) for i in range(0, len(scratch_card), 4)])
             
             if bool(prize):
-                if payout > kitty["tax"] + 10:
-                    payout = kitty["tax"] - 10
-                users[user_id]["GLD"] += payout
-                kitty["tax"] -= payout
+                if payout > tax:
+                    payout = tax - 10
+                await user_funcs.update_wallet(ctx.author, "GLD", payout)
+                await server_funcs.update_tax(-payout)
                 await ctx.send(f"{scratch_card}\n{ctx.author} matched 4 {prize_emoji}s! They won {payout} GLD!")
-                ####
             else:
                 await ctx.send(f"{scratch_card}\nUnlucky... No matches!")
-
-            with open(self.WALLET_PATH, "w") as f:
-                json.dump(users, f)
-
-            with open(self.KITTY_PATH, "w") as f:
-                    json.dump(kitty, f)
-
-            with open(self.SCRATCH_HISTORY_PATH, "a") as f:
-                str_time = datetime.datetime.now().strftime("%m_%d_%Y__%H_%M_%S")
-                json.dump({"username": str(ctx.author.name), "user_id": user_id, "time":str_time, "payout": payout, "cost": cost}, f)
-                f.write("\n")
-            
-        else:
-            await ctx.send("You don't have a wallet!")
     
 async def setup(bot: commands.bot):
         await bot.add_cog(Economy(bot))

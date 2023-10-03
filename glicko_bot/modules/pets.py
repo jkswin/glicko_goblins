@@ -143,9 +143,9 @@ FILTH_ADJECTIVES = {    1: "filthy",
 
 class Pet:
 
-    def __init__(self, owner: str or None = None):
+    def __init__(self, owner=None):
         
-        self.owner = owner
+        self.owner_id = owner
         self.name = ""
         self.species = self._get_species()
         self.colour = self._get_colour()
@@ -165,12 +165,11 @@ class Pet:
         self.affection = 0
 
         self.memory = []
-        self.conversation_history = False
+        self.relationships = {}
+        self.xy = random.choices(list(range(10)), k=2)
+        self.is_busy = False
 
         self._init_odds()
-
-    def commit_conversation_to_memory(self):
-        return
     
     def reply(self):
         return "..."
@@ -239,15 +238,15 @@ class Pet:
         return f"{self.name}{with_name}{self.colour.title()} {zomb}{self.species.title()}"
         
     def get_age(self):
-        return (datetime.datetime.now() - 
-                datetime.datetime.strptime(self.birthday, PET_DATE_STRF)).days
+        return (datetime.datetime.now().replace(microsecond=0) - 
+                self.birthday).days
     
     def give_name(self, name:str):
         self.name = name
 
     def feed(self):
         self.hunger -= FULLNESS_GAINED
-        self.last_meal = datetime.datetime.now().strftime(PET_DATE_STRF)
+        self.last_meal = datetime.datetime.now()#.strftime(PET_DATE_STRF)
         if self.hunger < 0:
             self.hunger = 0
 
@@ -294,9 +293,7 @@ class Pet:
     
     @staticmethod
     def str_date_now():
-        return datetime.datetime.strftime(datetime.datetime.now(),
-                                                   PET_DATE_STRF,
-                                                   )
+        return datetime.datetime.now().replace(microsecond=0) 
 
 class Gacha:
     
@@ -308,3 +305,23 @@ class Gacha:
     
     def species_draw(stars:int=1):
         return sorted([Pet() for i in range(stars)], key=lambda x: x.species_odds)[0]
+
+
+#TODO: Summarize previous conversations.
+#TODO: 
+
+class PetGrid:
+    def __init__(self, pets: list[Pet], gridsize=10):
+        self.pets = pets
+    
+    @staticmethod
+    def _is_neighbour(xy, ij):
+        x, y = xy
+        i, j = ij
+        return abs(x - i) == 1 and abs(y - j) == 1
+    
+    @staticmethod
+    def _random_step(xy):
+        x,y = xy
+        i,j = random.choices([0,1], k=2)
+        return (x+i,y+j)

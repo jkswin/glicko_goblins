@@ -16,6 +16,7 @@ import numpy as np
 
 from ..modules.time import tourn_times, start_time, scout_duration
 from ..modules.models import *
+from ..modules import user_funcs, server_funcs
 
 from glicko_goblins.combat import Tournament
 
@@ -32,9 +33,9 @@ class Sponsor(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.tournament_path = "glicko_goblins/data/tournament.pkl"
-        self.user_path = "glicko_bot/data/users.json"
 
     @commands.command()
+    @commands.guild_only()
     async def times(self, ctx):
         """
         Display the times of tournaments and tournament rounds.
@@ -164,25 +165,24 @@ class Sponsor(commands.Cog):
             return
         
         tourn = Tournament.from_save(self.tournament_path)
-        with open(self.user_path, "r") as f:
-                        users = json.load(f)
         
         managers = [fighter["manager"] for fighter in tourn.fighter_info()]
         if managers.count(ctx.message.author.name) >= 3:
             await ctx.send("You can't sponsor more than 3 goblins per tournament!")
             return
         
+        wallet = await user_funcs.get_user_wallet(ctx.author)
+        user_funds = wallet.get("GLD", 0)
+        
         for goblin in tourn.fighters:
             if goblin.tourn_id == tourn_id:
                 if goblin.manager == None:
 
-                    user_funds = users[str(ctx.message.author.id)]["GLD"]
-
                     if user_funds < goblin.funding:
                         await ctx.send(f"You don't have enough GLD to sponsor {goblin.name} (tourn_id: {goblin.tourn_id}).\nTheir current funding is {goblin.funding}")
                         return
-                    
-                    users[str(ctx.message.author.id)]["GLD"] -= goblin.funding
+
+                    await user_funcs.update_wallet(ctx.author, "GLD", -goblin.funding)
                     goblin.manager = ctx.message.author.name
                     await ctx.send(f"{ctx.message.author.name} succesfully sponsored {goblin.name} for {goblin.funding} GLD!")
 
@@ -190,8 +190,6 @@ class Sponsor(commands.Cog):
                     await ctx.send(f"This goblin is already funded by {goblin.manager}")
 
         tourn.save(self.tournament_path)
-        with open(self.user_path, "w") as f:
-            json.dump(users,f)
 
     @commands.command(aliases=["tip", "hint"])
     async def tipoff(self, ctx, tourn_id: int = commands.parameter(description="The tourn_id of a goblin.")):
@@ -208,6 +206,9 @@ class Sponsor(commands.Cog):
         
         features, model, prompt = random.choice(models)
 
+        wallet = await user_funcs.get_user_wallet(ctx.author)
+        funds = wallet.get("GLD", 0)
+
         if not os.path.exists(self.tournament_path):
             await ctx.send("There isn't an ongoing tournament right now!")
             return
@@ -221,16 +222,16 @@ class Sponsor(commands.Cog):
             return
         
         goblin = goblins.loc[goblins.tourn_id == tourn_id]
-        if goblin["manager"].values[0] == None:
+        manager = goblin["manager"].values[0]
+        if manager == None or manager== ctx.author.name:
 
             tip_price = max((5, (3*goblin["funding"].values[0])//20))
 
-            with open(self.user_path, "r") as f:
-                users = json.load(f)
-
-            if users[str(ctx.message.author.id)].get("GLD", 0) < tip_price:
+            if funds < tip_price:
                 await ctx.send(f"Pahaha you think I'm giving away that information for any less than {tip_price} GLD?")
                 return
+            
+            await user_funcs.update_wallet(ctx.author, "GLD", -tip_price)
             
             features = goblin[features].to_numpy().reshape(1,-1)
             prediction = model.predict(features)[0]
