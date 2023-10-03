@@ -28,6 +28,7 @@ class Background(commands.Cog):
         self.tournament = None
         self.accepting_sponsors = True
         self.tournament_path = "glicko_goblins/data/tournament.pkl"
+        self.archive_path = "glicko_goblins/data/archive/"
         self.coin_config_path = "coin.cfg"
         self.tax = 0.02
 

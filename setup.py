@@ -9,6 +9,7 @@ from config import Auth
 
 
 data_path = "glicko_bot/data"
+archive_path = os.path.join(data_path, "archive")
 
 coin_config_path = "coin.cfg"
 example_coin_config = [{"coin_type": "riot",
@@ -62,6 +63,14 @@ if __name__ == "__main__":
         print("Done")
     else:
         print(f"{data_path} already exists.")
+
+    # archive
+    if not os.path.exists(archive_path):
+        print("Creating archive directory...")
+        os.mkdir(archive_path)
+        print("Done")
+    else:
+        print(f"{archive_path} already exists.")
 
     # try create base coin config
     if not os.path.exists(coin_config_path):
