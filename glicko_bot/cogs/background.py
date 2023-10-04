@@ -183,9 +183,11 @@ class Background(commands.Cog):
 
         previous_rates = await exchange_funcs.get_current_rate()
         new_rates = await currency_query(self.coin_config_path)
-        if previous_rates is None:
-            previous_rates = {"GLD":1}
-            previous_rates.update({k:0 for k in new_rates.items()})
+        
+        for key in new_rates:
+            if key not in previous_rates.keys():
+                previous_rates[key] = 0
+
         await exchange_funcs.update_exchange_rate(new_rates)
 
         # send a server message notifying of updated rates

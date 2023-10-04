@@ -22,6 +22,10 @@ cols = [key for key in exchange_document.keys()]
 async def create_table():
     if TABLE_NAME not in DB.db.list_collection_names():
         DB.db.create_collection(TABLE_NAME)
+        DB.cursor(TABLE_NAME).insert_one({
+        "timestamp": datetime.datetime.now(),
+        "currencies":{"GLD":1},
+    })
 
 
 async def update_exchange_rate(rates):
