@@ -209,8 +209,6 @@ class Economy(commands.Cog):
         
         data = await exchange_funcs.get_last_n_days(n_days)
         df = pd.DataFrame(data)
-        if not df:
-            return
         
         df.set_index("timestamp",inplace=True)
         df.drop(["_id"], axis=1, inplace=True)
