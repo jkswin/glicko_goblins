@@ -197,10 +197,13 @@ class Background(commands.Cog):
             if channel:
                 message = f"*Note that updates of less than 10% are not shown*"
                 embed = discord.Embed(title="Rate Update", color=0x00ff00, description=message)  # Green
-                for pr, r in zip(previous_rates.items(), new_rates.items()):
-                    if pr[0] != "GLD":
-                        if abs(pr[1] - r[1]) > 0.1*r[1]:
-                            embed.add_field(name=pr[0], value=f"{pr[1]:.3f} -> {r[1]:.3f}", inline=True)
+            
+                for key in new_rates.keys():
+                    if key != "GLD":
+                        pr = previous_rates.get(key, 0)
+                        rt = new_rates.get(key, 0)
+                        if abs(pr - r) > 0.1*r:
+                            embed.add_field(name=key, value=f"{pr:.3f} -> {r:.3f}", inline=True)
 
                 if embed.fields:
                     await channel.send(embed=embed)
