@@ -85,6 +85,7 @@ class Economy(commands.Cog):
 
             else:
                 exchange_rates = await exchange_funcs.get_current_rate()
+                exchange_rates = exchange_rates.get("currencies")
                 gold_in_wallet = self.wallet_to_gold(ctx.author, exchange_rates)
                 await server_funcs.update_tax(gold_in_wallet)
                 await user_funcs.reset_user_wallet(ctx.author)
@@ -137,7 +138,7 @@ class Economy(commands.Cog):
         """
 
         exchange_data = await exchange_funcs.get_current_rate()
-
+        exchange_data = exchange_data.get("currencies")
         if from_currency in exchange_data and to_currency in exchange_data:
             from_rate = exchange_data[from_currency]
             to_rate = exchange_data[to_currency]
@@ -178,6 +179,7 @@ class Economy(commands.Cog):
         !exchange_rate
         """
         exchange_data = await exchange_funcs.get_current_rate()
+        exchange_data = exchange_data.get("currencies")
         if exchange_data:
             embed = discord.Embed(title="Exchange Rates", color=0x00ff00)  # Green
             for c, r in exchange_data.items():
@@ -246,6 +248,7 @@ class Economy(commands.Cog):
         max_gold = 0
         wallets = await user_funcs.get_all_wallets()
         exchange_rates = await exchange_funcs.get_current_rate()
+        exchange_rates = exchange_rates.get("currencies")
         for wallet in wallets:
             wallet = wallet.get("wallet", {})
             gold = self.wallet_to_gold(wallet, exchange_rates) 

@@ -182,6 +182,7 @@ class Background(commands.Cog):
         """
 
         previous_rates = await exchange_funcs.get_current_rate()
+        previous_rates = previous_rates.get("currencies")
         new_rates = await currency_query(self.coin_config_path)
         
         for key in new_rates:
@@ -215,6 +216,7 @@ class Background(commands.Cog):
         tax_pool = await server_funcs.get_tax()
         wallets = await user_funcs.get_all_wallets()
         exchange_rates = await exchange_funcs.get_current_rate()
+        exchange_rates = exchange_rates.get("currencies")
 
         user_golds = {user:self.wallet_to_gold(g, exchange_rates) for user, g in wallets.items()}
         total_credit = tax_pool//200
