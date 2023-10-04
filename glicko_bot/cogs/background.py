@@ -202,8 +202,8 @@ class Background(commands.Cog):
                     if key != "GLD":
                         pr = previous_rates.get(key, 0)
                         rt = new_rates.get(key, 0)
-                        if abs(pr - r) > 0.1*r:
-                            embed.add_field(name=key, value=f"{pr:.3f} -> {r:.3f}", inline=True)
+                        if abs(pr - rt) > 0.1*rt:
+                            embed.add_field(name=key, value=f"{pr:.3f} -> {rt:.3f}", inline=True)
 
                 if embed.fields:
                     await channel.send(embed=embed)
